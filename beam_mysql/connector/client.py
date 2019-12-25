@@ -9,11 +9,13 @@ import mysql.connector
 
 from beam_mysql.connector.errors import MySQLClientError
 
-SELECT_STATEMENT = "SELECT"
+_SELECT_STATEMENT = "SELECT"
 
 
 @dataclasses.dataclass(frozen=True)
 class MySQLClient:
+    """A mysql client object."""
+
     config: Dict
 
     def __post_init__(self):
@@ -32,7 +34,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query, SELECT_STATEMENT)
+        self._validate_query(query, _SELECT_STATEMENT)
 
         with _MySQLConnection(self.config) as conn:
             # buffered is false because it can be assumed that the data size is too large
@@ -49,9 +51,9 @@ class MySQLClient:
 
             cur.close()
 
-    def counts(self, query: str) -> int:
+    def estimate_almost_counts(self, query: str) -> int:
         """
-        Count the total number of rows.
+        Estimate the total number of rows.
 
         Args:
             query: query with select statement
@@ -62,7 +64,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query, SELECT_STATEMENT)
+        self._validate_query(query, _SELECT_STATEMENT)
         count_query = f"EXPLAIN SELECT * FROM ({query}) as subq"
 
         with _MySQLConnection(self.config) as conn:
@@ -95,7 +97,7 @@ class MySQLClient:
 
     @staticmethod
     def _validate_config(config: Dict):
-        required_keys = {"host", "database", "user", "password"}
+        required_keys = {"host", "port", "database", "user", "password"}
         if not config.keys() == required_keys:
             raise MySQLClientError(
                 f"Config is not satisfied. required: {required_keys}, actual: {config.keys()}"
