@@ -19,7 +19,7 @@ class MySQLSource(iobase.BoundedSource):
     def __post_init__(self):
         self.client = MySQLClient(self.config)
 
-        rough_counts = self.client.estimate_rough_counts(self.query)
+        rough_counts = self.client.rough_counts_estimator(self.query)
         # counts not accuracy so increase estimated data size
         self.counts = rough_counts * _ESTIMATE_SIZE_BUFFER
         self.split_size = self.counts // 10000
