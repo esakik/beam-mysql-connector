@@ -19,9 +19,9 @@ class MySQLSource(iobase.BoundedSource):
     def __post_init__(self):
         self.client = MySQLClient(self.config)
 
-        almost_counts = self.client.estimate_almost_counts(self.query)
+        rough_counts = self.client.estimate_rough_counts(self.query)
         # counts not accuracy so increase estimated data size
-        self.counts = almost_counts * _ESTIMATE_SIZE_BUFFER
+        self.counts = rough_counts * _ESTIMATE_SIZE_BUFFER
         self.split_size = self.counts // 10000
 
     def estimate_size(self):
@@ -36,16 +36,16 @@ class MySQLSource(iobase.BoundedSource):
         return OffsetRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
-        rows_generator = self.client.row_generator(self.query)
+        record_generator = self.client.record_generator(self.query)
 
         for i in range(range_tracker.start_position(), range_tracker.stop_position()):
             if not range_tracker.try_claim(i):
                 return
 
-            yield next(rows_generator)
+            yield next(record_generator)
 
         while True:
-            next_object = next(rows_generator)
+            next_object = next(record_generator)
             if next_object:
                 yield next_object
             else:

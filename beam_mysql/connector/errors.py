@@ -1,4 +1,4 @@
-"""Beam mysql error classes."""
+"""Beam - MySQL error classes."""
 
 
 class BeamMySQLError(Exception):
