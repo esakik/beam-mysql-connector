@@ -37,6 +37,10 @@ def get_version():
     return global_names["__version__"]
 
 
+with open("README.md") as f:
+    README = f.read()
+
+
 PACKAGE_NAME = "beam-mysql-connector"
 PACKAGE_VERSION = get_version()
 PACKAGE_DESCRIPTION = "MySQL I/O Connector of Apache Beam"
@@ -45,9 +49,7 @@ PACKAGE_URL = "https://github.com/esaki01/beam-mysql-connector"
 PACKAGE_AUTHOR = "esaki01"
 PACKAGE_EMAIL = "esaki1011@gmail.com"
 PACKAGE_KEYWORDS = "apache beam mysql connector"
-PACKAGE_LONG_DESCRIPTION = """
-Beam - MySQL Connector is an io connector of Apache Beam to access MySQL databases.
-"""
+PACKAGE_LONG_DESCRIPTION = README
 
 REQUIRED_PACKAGES = [
     "apache-beam==2.15.*",
@@ -59,6 +61,7 @@ setup(
     version=PACKAGE_VERSION,
     description=PACKAGE_DESCRIPTION,
     long_description=PACKAGE_LONG_DESCRIPTION,
+    long_description_content_type="text/markdown",
     url=PACKAGE_URL,
     # download_url=PACKAGE_DOWNLOAD_URL,
     author=PACKAGE_AUTHOR,
