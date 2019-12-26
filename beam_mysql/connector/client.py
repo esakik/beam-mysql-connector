@@ -86,7 +86,6 @@ class MySQLClient:
                     # Count query should be "PRIMARY" because it is not sub query.
                     if record["select_type"] == "PRIMARY":
                         total_number = record["records"]
-
             except MySQLConnectorError as e:
                 raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")
 
