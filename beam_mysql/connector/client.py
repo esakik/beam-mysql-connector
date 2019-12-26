@@ -1,4 +1,4 @@
-"""a client of mysql."""
+"""A client of mysql."""
 
 import dataclasses
 import logging
