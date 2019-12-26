@@ -83,9 +83,9 @@ class MySQLClient:
 
                 for record in records:
                     # Query of the argument should be "DERIVED" because it is sub query of explain select.
-                    # Count query should be "PRIMARY" because it is not sub query.
-                    if record["select_type"] == "PRIMARY":
-                        total_number = record["records"]
+                    # Count query should be "PRIMARY" or "SIMPLE" because it is not sub query.
+                    if record["select_type"] == "PRIMARY" or "SIMPLE":
+                        total_number = record["rows"]
             except MySQLConnectorError as e:
                 raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")
 
