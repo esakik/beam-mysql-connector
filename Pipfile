@@ -13,3 +13,7 @@ mysql-connector-python = "==8.0.*"
 
 [requires]
 python_version = "3.7"
+
+[scripts]
+lint = "python setup.py lint"
+fmt = "python setup.py fmt"
