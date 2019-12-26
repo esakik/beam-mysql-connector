@@ -6,7 +6,7 @@ from typing import Dict
 from typing import Generator
 
 import mysql.connector
-from mysql.connector.errors import Error as MySQLError
+from mysql.connector.errors import Error as MySQLConnectorError
 
 from beam_mysql.connector.errors import MySQLClientError
 
@@ -47,12 +47,12 @@ class MySQLClient:
 
                 for record in cur:
                     yield record
-            except MySQLError as e:
+            except MySQLConnectorError as e:
                 raise MySQLClientError(f"Failed to execute query: {query}, Raise exception: {e}")
 
             cur.close()
 
-    def estimate_rough_counts(self, query: str) -> int:
+    def rough_counts_estimator(self, query: str) -> int:
         """
         Make a rough estimate of the total number of records.
         To avoid waiting time by select counts query when the data size is too large.
@@ -87,7 +87,7 @@ class MySQLClient:
                     if record["select_type"] == "PRIMARY":
                         total_number = record["records"]
 
-            except MySQLError as e:
+            except MySQLConnectorError as e:
                 raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")
 
             cur.close()
@@ -124,7 +124,7 @@ class _MySQLConnection:
         try:
             self.conn = mysql.connector.connect(**self._config)
             return self.conn
-        except MySQLError as e:
+        except MySQLConnectorError as e:
             raise MySQLClientError(f"Failed to connect mysql, Raise exception: {e}")
 
     def __exit__(self, exception_type, exception_value, traceback):
