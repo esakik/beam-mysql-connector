@@ -13,6 +13,8 @@ _ESTIMATE_SIZE_BUFFER = 10
 
 @dataclasses.dataclass
 class MySQLSource(iobase.BoundedSource):
+    """A source object of mysql."""
+
     query: str
     config: Dict
 
@@ -25,9 +27,11 @@ class MySQLSource(iobase.BoundedSource):
         self.split_size = self.counts // 10000
 
     def estimate_size(self):
+        """Implement :class:`~apache_beam.io.iobase.BoundedSource.estimate_size`"""
         return self.counts
 
     def get_range_tracker(self, start_position, stop_position):
+        """Implement :class:`~apache_beam.io.iobase.BoundedSource.get_range_tracker`"""
         if start_position is None:
             start_position = 0
         if stop_position is None:
@@ -36,6 +40,7 @@ class MySQLSource(iobase.BoundedSource):
         return OffsetRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
+        """Implement :class:`~apache_beam.io.iobase.BoundedSource.read`"""
         record_generator = self.client.record_generator(self.query)
 
         for i in range(range_tracker.start_position(), range_tracker.stop_position()):
@@ -52,6 +57,7 @@ class MySQLSource(iobase.BoundedSource):
                 break
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
+        """Implement :class:`~apache_beam.io.iobase.BoundedSource.split`"""
         if start_position is None:
             start_position = 0
         if stop_position is None:
