@@ -6,6 +6,7 @@ from typing import Dict
 from typing import Generator
 
 import mysql.connector
+from mysql.connector.errors import Error as MySQLError
 
 from beam_mysql.connector.errors import MySQLClientError
 
@@ -46,7 +47,7 @@ class MySQLClient:
 
                 for row in cur:
                     yield row
-            except mysql.connector.errors.Error as e:
+            except MySQLError as e:
                 raise MySQLClientError(f"Failed to execute query: {query}, Raise exception: {e}")
 
             cur.close()
@@ -85,7 +86,7 @@ class MySQLClient:
                     if row["select_type"] == "PRIMARY":
                         total_number = row["rows"]
 
-            except mysql.connector.errors.Error as e:
+            except MySQLError as e:
                 raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")
 
             cur.close()
@@ -119,8 +120,11 @@ class _MySQLConnection:
     _config: Dict
 
     def __enter__(self):
-        self.conn = mysql.connector.connect(**self._config)
-        return self.conn
+        try:
+            self.conn = mysql.connector.connect(**self._config)
+            return self.conn
+        except MySQLError as e:
+            raise MySQLClientError(f"Failed to connect mysql, Raise exception: {e}")
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.conn.close()
