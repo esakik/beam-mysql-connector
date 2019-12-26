@@ -8,6 +8,8 @@ from setuptools import find_packages
 from setuptools import setup
 
 SRC_DIR_NAME = "beam_mysql"
+EXAMPLES_DIR_NAME = "examples"
+TESTS_DIR_NAME = "tests"
 
 
 class SimpleCommand(Command):
@@ -22,13 +24,13 @@ class SimpleCommand(Command):
 
 class LintCommand(SimpleCommand):
     def run(self):
-        subprocess.run(["black", SRC_DIR_NAME, "-l", "120", "--check", "--diff"])
-        subprocess.run(["mypy", SRC_DIR_NAME])
+        subprocess.run(["black", SRC_DIR_NAME, EXAMPLES_DIR_NAME, TESTS_DIR_NAME, "-l", "120", "--check", "--diff"])
+        subprocess.run(["mypy", SRC_DIR_NAME, EXAMPLES_DIR_NAME, TESTS_DIR_NAME])
 
 
 class FormatCommand(SimpleCommand):
     def run(self):
-        subprocess.run(["black", SRC_DIR_NAME, "-l", "120"])
+        subprocess.run(["black", SRC_DIR_NAME, EXAMPLES_DIR_NAME, TESTS_DIR_NAME, "-l", "120"])
 
 
 def get_version():
