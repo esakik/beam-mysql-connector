@@ -67,10 +67,7 @@ class MySQLSource(iobase.BoundedSource):
         bundle_stop = self.split_size
         while bundle_start < stop_position:
             yield iobase.SourceBundle(
-                weight=desired_bundle_size,
-                source=self,
-                start_position=bundle_start,
-                stop_position=bundle_stop
+                weight=desired_bundle_size, source=self, start_position=bundle_start, stop_position=bundle_stop
             )
 
             bundle_start = bundle_stop

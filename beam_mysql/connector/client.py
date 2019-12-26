@@ -100,9 +100,7 @@ class MySQLClient:
     def _validate_config(config: Dict):
         required_keys = {"host", "port", "database", "user", "password"}
         if not config.keys() == required_keys:
-            raise MySQLClientError(
-                f"Config is not satisfied. required: {required_keys}, actual: {config.keys()}"
-            )
+            raise MySQLClientError(f"Config is not satisfied. required: {required_keys}, actual: {config.keys()}")
 
     @staticmethod
     def _validate_query(query: str, *args, **kwargs):
