@@ -1,1 +1,3 @@
 include README.md
+recursive-exclude examples *
+recursive-exclude tests *
