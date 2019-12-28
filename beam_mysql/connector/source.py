@@ -2,13 +2,13 @@
 
 import dataclasses
 from typing import Dict
-from typing import Any
 
 from apache_beam.io import iobase
 from apache_beam.io.range_trackers import OffsetRangeTracker
 
 from beam_mysql.connector.client import MySQLClient
-from apache_beam.options.value_provider import RuntimeValueProvider
+from beam_mysql.connector.utils import cleanse_query
+from beam_mysql.connector.utils import get_runtime_value
 
 
 @dataclasses.dataclass
@@ -71,8 +71,8 @@ class MySQLSource(iobase.BoundedSource):
 
     def _build_value(self):
         for k, v in self.config.items():
-            self.config[k] = self._get_runtime_value(v)
-        self.query = self._get_runtime_value(self.query).strip(";")
+            self.config[k] = get_runtime_value(v)
+        self.query = cleanse_query(get_runtime_value(self.query))
 
         self.client = MySQLClient(self.config)
 
@@ -81,10 +81,3 @@ class MySQLSource(iobase.BoundedSource):
 
         # OPTIMIZE: fix algorithm to calculate chunk size
         self.chunk_size = self.counts // 10000
-
-    @staticmethod
-    def _get_runtime_value(value: Any) -> Any:
-        if isinstance(value, RuntimeValueProvider):
-            return value.get()
-        else:
-            return value

@@ -4,6 +4,7 @@ import dataclasses
 import logging
 from typing import Dict
 from typing import Generator
+from typing import List
 
 import mysql.connector
 from mysql.connector.errors import Error as MySQLConnectorError
@@ -11,6 +12,7 @@ from mysql.connector.errors import Error as MySQLConnectorError
 from beam_mysql.connector.errors import MySQLClientError
 
 _SELECT_STATEMENT = "SELECT"
+_INSERT_STATEMENT = "INSERT"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -35,7 +37,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query=query, statement=_SELECT_STATEMENT)
+        self._validate_query(query, [_SELECT_STATEMENT])
 
         with _MySQLConnection(self.config) as conn:
             # buffered is false because it can be assumed that the data size is too large
@@ -66,7 +68,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query=query, statement=_SELECT_STATEMENT)
+        self._validate_query(query, [_SELECT_STATEMENT])
         count_query = f"EXPLAIN SELECT * FROM ({query}) as subq"
 
         with _MySQLConnection(self.config) as conn:
@@ -96,6 +98,31 @@ class MySQLClient:
             else:
                 return total_number
 
+    def record_loader(self, query: str):
+        """
+        Load dict record into mysql.
+
+        Args:
+            query: query with insert or update statement
+
+        Raises:
+            ~beam_mysql.connector.errors.MySQLClientError
+        """
+        self._validate_query(query, [_INSERT_STATEMENT])
+
+        with _MySQLConnection(self.config) as conn:
+            cur = conn.cursor()
+
+            try:
+                cur.execute(query)
+                conn.commit()
+                logging.info(f"Successfully execute query: {query}")
+            except MySQLConnectorError as e:
+                conn.rollback()
+                raise MySQLClientError(f"Failed to execute query: {query}, Raise exception: {e}")
+
+            cur.close()
+
     @staticmethod
     def _validate_config(config: Dict):
         required_keys = {"host", "port", "database", "user", "password"}
@@ -103,12 +130,12 @@ class MySQLClient:
             raise MySQLClientError(f"Config is not satisfied. required: {required_keys}, actual: {config.keys()}")
 
     @staticmethod
-    def _validate_query(query: str, *args, **kwargs):
-        statement = kwargs.get("statement")
+    def _validate_query(query: str, statements: List[str]):
         query = query.lstrip()
 
-        if statement and not query.lower().startswith(statement.lower()):
-            raise MySQLClientError(f"Query expected to start with {statement} statement. Query: {query}")
+        for statement in statements:
+            if statement and not query.lower().startswith(statement.lower()):
+                raise MySQLClientError(f"Query expected to start with {statement} statement. Query: {query}")
 
 
 @dataclasses.dataclass
