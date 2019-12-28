@@ -34,7 +34,7 @@ def run():
 
     (
         p
-        | "ReadFromText" >> read_from_mysql
+        | "ReadFromMySQL" >> read_from_mysql
         | "NoTransform" >> beam.Map(lambda e: e)
         | "WriteToText" >> beam.io.WriteToText(options.output, file_name_suffix=".txt", shard_name_template="")
     )
