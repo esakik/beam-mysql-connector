@@ -9,8 +9,8 @@ from beam_mysql.connector.io import ReadFromMySQL
 class ReadRecordsOptions(PipelineOptions):
     @classmethod
     def _add_argparse_args(cls, parser):
-        parser.add_value_provider_argument("--host", dest="host", default="0.0.0.0")
-        parser.add_value_provider_argument("--port", dest="port", default=3307)
+        parser.add_value_provider_argument("--host", dest="host", default="localhost")
+        parser.add_value_provider_argument("--port", dest="port", default=3306)
         parser.add_value_provider_argument("--database", dest="database", default="test_db")
         parser.add_value_provider_argument("--query", dest="query", default="SELECT * FROM test_db.tests;")
         parser.add_value_provider_argument("--user", dest="user", default="root")
