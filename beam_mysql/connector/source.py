@@ -10,8 +10,6 @@ from apache_beam.io.range_trackers import OffsetRangeTracker
 from beam_mysql.connector.client import MySQLClient
 from apache_beam.options.value_provider import RuntimeValueProvider
 
-_ESTIMATE_SIZE_BUFFER = 10
-
 
 @dataclasses.dataclass
 class MySQLSource(iobase.BoundedSource):
@@ -62,27 +60,27 @@ class MySQLSource(iobase.BoundedSource):
             stop_position = self.counts
 
         bundle_start = start_position
-        bundle_stop = self.split_size
+        bundle_stop = self.chunk_size
         while bundle_start < stop_position:
             yield iobase.SourceBundle(
                 weight=desired_bundle_size, source=self, start_position=bundle_start, stop_position=bundle_stop
             )
 
             bundle_start = bundle_stop
-            bundle_stop += self.split_size
+            bundle_stop += self.chunk_size
 
     def _build_value(self):
         for k, v in self.config.items():
             self.config[k] = self._get_runtime_value(v)
-
         self.query = self._get_runtime_value(self.query).strip(";")
 
         self.client = MySQLClient(self.config)
-        rough_counts = self.client.rough_counts_estimator(self.query)
 
-        # counts not accuracy so increase estimated data size
-        self.counts = rough_counts * _ESTIMATE_SIZE_BUFFER
-        self.split_size = self.counts // 10000
+        rough_counts = self.client.rough_counts_estimator(self.query)
+        self.counts = rough_counts
+
+        # OPTIMIZE: fix algorithm to calculate chunk size
+        self.chunk_size = self.counts // 10000
 
     @staticmethod
     def _get_runtime_value(value: Any) -> Any:
