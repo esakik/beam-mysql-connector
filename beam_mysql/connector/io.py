@@ -1,6 +1,5 @@
 """Sources and sinks of mysql."""
 
-import dataclasses
 from typing import Dict
 
 import apache_beam as beam
@@ -13,62 +12,65 @@ from beam_mysql.connector.source import MySQLSource
 from beam_mysql.connector.utils import get_runtime_value
 
 
-@dataclasses.dataclass
 class ReadFromMySQL(PTransform):
     """Create PCollection from MySQL."""
 
-    query: str
-    host: str
-    database: str
-    user: str
-    password: str
-    port: int = 3306
+    def __init__(self, query: str, host: str, database: str, user: str, password: str, port: int = 3306):
+        super().__init__()
+        self._query = query
+        self._host = host
+        self._database = database
+        self._user = user
+        self._password = password
+        self._port = port
 
-    def __post_init__(self):
-        self.config = {
-            "host": self.host,
-            "database": self.database,
-            "user": self.user,
-            "password": self.password,
-            "port": self.port,
+        self._config = {
+            "host": self._host,
+            "database": self._database,
+            "user": self._user,
+            "password": self._password,
+            "port": self._port,
         }
 
     def expand(self, pcoll: PCollection) -> PCollection:
-        return pcoll | iobase.Read(MySQLSource(self.query, self.config))
+        return pcoll | iobase.Read(MySQLSource(self._query, self._config))
 
 
-@dataclasses.dataclass
 class WriteToMySQL(PTransform):
     """Write dict rows to MySQL."""
 
-    host: str
-    database: str
-    table: str
-    user: str
-    password: str
-    port: int = 3306
-    batch_size: int = 0
+    def __init__(
+        self, host: str, database: str, table: str, user: str, password: str, port: int = 3306, batch_size: int = 0
+    ):
+        super().__init__()
+        self._host = host
+        self._database = database
+        self._table = table
+        self._user = user
+        self._password = password
+        self._port = port
+        self._batch_size = batch_size
 
-    def __post_init__(self):
-        self.config = {
-            "host": self.host,
-            "database": self.database,
-            "user": self.user,
-            "password": self.password,
-            "port": self.port,
+        self._config = {
+            "host": self._host,
+            "database": self._database,
+            "user": self._user,
+            "password": self._password,
+            "port": self._port,
         }
 
     def expand(self, pcoll: PCollection) -> PCollection:
-        return pcoll | beam.ParDo(_WriteToMySQLFn(self.config, self.table, self.batch_size))
+        return pcoll | beam.ParDo(_WriteToMySQLFn(self._config, self._table, self._batch_size))
 
 
-@dataclasses.dataclass
 class _WriteToMySQLFn(beam.DoFn):
     """DoFn for WriteToMySQL."""
 
-    config: Dict
-    table: str
-    batch_size: int
+    def __init__(self, config: Dict, table: str, batch_size: int):
+        super().__init__()
+        self._config = config
+        self._table = table
+        self._batch_size = batch_size
 
     def start_bundle(self):
         self._build_value()
@@ -83,23 +85,23 @@ class _WriteToMySQLFn(beam.DoFn):
 
         column_str = ", ".join(columns)
         value_str = ", ".join([f"{value}" if isinstance(value, (int, float)) else f"'{value}'" for value in values])
-        query = f"INSERT INTO {self.config['database']}.{self.table}({column_str}) VALUES({value_str});"
+        query = f"INSERT INTO {self._config['database']}.{self._table}({column_str}) VALUES({value_str});"
 
         self._queries.append(query)
 
-        if len(self._queries) > self.batch_size:
-            self.client.record_loader("\n".join(self._queries))
+        if len(self._queries) > self._batch_size:
+            self._client.record_loader("\n".join(self._queries))
             self._queries.clear()
 
     def finish_bundle(self):
         if len(self._queries):
-            self.client.record_loader("\n".join(self._queries))
+            self._client.record_loader("\n".join(self._queries))
             self._queries.clear()
 
     def _build_value(self):
-        for k, v in self.config.items():
-            self.config[k] = get_runtime_value(v)
-        self.table = get_runtime_value(self.table)
-        self.batch_size = get_runtime_value(self.batch_size)
+        for k, v in self._config.items():
+            self._config[k] = get_runtime_value(v)
+        self._table = get_runtime_value(self._table)
+        self._batch_size = get_runtime_value(self._batch_size)
 
-        self.client = MySQLClient(self.config)
+        self._client = MySQLClient(self._config)
