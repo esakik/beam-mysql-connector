@@ -7,6 +7,9 @@ from beam_mysql.connector.client import MySQLClient
 from beam_mysql.connector.utils import cleanse_query
 from beam_mysql.connector.utils import get_runtime_value
 
+_COUNTS_RANGE_BUFFER = 10
+_COUNTS_SPLIT_SIZE = 10000
+
 
 class MySQLSource(iobase.BoundedSource):
     """A source object of mysql."""
@@ -42,7 +45,8 @@ class MySQLSource(iobase.BoundedSource):
         if start_position is None:
             start_position = 0
         if stop_position is None:
-            stop_position = self._counts
+            # OPTIMIZE: fix algorithm to calculate stop position
+            stop_position = self._counts * _COUNTS_RANGE_BUFFER
 
         return OffsetRangeTracker(start_position, stop_position)
 
@@ -57,13 +61,6 @@ class MySQLSource(iobase.BoundedSource):
                 return
 
             yield next_object
-
-        while True:
-            next_object = next(record_generator, None)
-            if next_object:
-                yield next_object
-            else:
-                break
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.split`"""
@@ -96,6 +93,6 @@ class MySQLSource(iobase.BoundedSource):
         self._counts = rough_counts
 
         # OPTIMIZE: fix algorithm to calculate chunk size
-        self._chunk_size = self._counts // 10000
+        self._chunk_size = self._counts // _COUNTS_SPLIT_SIZE
 
         self._is_builded = True
