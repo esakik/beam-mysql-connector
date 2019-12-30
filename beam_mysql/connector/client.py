@@ -1,6 +1,5 @@
 """A client of mysql."""
 
-import dataclasses
 import logging
 from typing import Dict
 from typing import Generator
@@ -15,14 +14,12 @@ _SELECT_STATEMENT = "SELECT"
 _INSERT_STATEMENT = "INSERT"
 
 
-@dataclasses.dataclass(frozen=True)
 class MySQLClient:
     """A mysql client object."""
 
-    config: Dict
-
-    def __post_init__(self):
-        self._validate_config(self.config)
+    def __init__(self, config: Dict):
+        self._config = config
+        self._validate_config(self._config)
 
     def record_generator(self, query: str) -> Generator[Dict, None, None]:
         """
@@ -39,7 +36,7 @@ class MySQLClient:
         """
         self._validate_query(query, [_SELECT_STATEMENT])
 
-        with _MySQLConnection(self.config) as conn:
+        with _MySQLConnection(self._config) as conn:
             # buffered is false because it can be assumed that the data size is too large
             cur = conn.cursor(buffered=False, dictionary=True)
 
@@ -71,7 +68,7 @@ class MySQLClient:
         self._validate_query(query, [_SELECT_STATEMENT])
         count_query = f"EXPLAIN SELECT * FROM ({query}) as subq"
 
-        with _MySQLConnection(self.config) as conn:
+        with _MySQLConnection(self._config) as conn:
             # buffered is false because it can be assumed that the data size is too large
             cur = conn.cursor(buffered=False, dictionary=True)
 
@@ -110,7 +107,7 @@ class MySQLClient:
         """
         self._validate_query(query, [_INSERT_STATEMENT])
 
-        with _MySQLConnection(self.config) as conn:
+        with _MySQLConnection(self._config) as conn:
             cur = conn.cursor()
 
             try:
@@ -138,11 +135,11 @@ class MySQLClient:
                 raise MySQLClientError(f"Query expected to start with {statement} statement. Query: {query}")
 
 
-@dataclasses.dataclass
 class _MySQLConnection:
     """A wrapper object to connect mysql."""
 
-    _config: Dict
+    def __init__(self, _config: Dict):
+        self._config = _config
 
     def __enter__(self):
         try:
