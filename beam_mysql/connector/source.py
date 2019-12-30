@@ -13,29 +13,45 @@ from beam_mysql.connector.utils import get_runtime_value
 class MySQLSource(iobase.BoundedSource):
     """A source object of mysql."""
 
-    def __init__(self, query: str, config: Dict):
+    def __init__(self, query: str, host: str, database: str, user: str, password: str, port: int):
         super().__init__()
-        self.query = query
-        self.config = config
+        self._query = query
+        self._host = host
+        self._database = database
+        self._user = user
+        self._password = password
+        self._port = port
+
+        self._counts = 0
+        self._chunk_size = 0
+
+        self._config = {
+            "host": self._host,
+            "database": self._database,
+            "user": self._user,
+            "password": self._password,
+            "port": self._port,
+        }
 
     def estimate_size(self):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.estimate_size`"""
-        return self.counts
+        return self._counts
 
     def get_range_tracker(self, start_position, stop_position):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.get_range_tracker`"""
-        self._build_value()
+        if not self._counts:
+            self._build_value()
 
         if start_position is None:
             start_position = 0
         if stop_position is None:
-            stop_position = self.counts
+            stop_position = self._counts
 
         return OffsetRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.read`"""
-        record_generator = self.client.record_generator(self.query)
+        record_generator = self._client.record_generator(self._query)
 
         for i in range(range_tracker.start_position(), range_tracker.stop_position()):
             next_object = next(record_generator, None)
@@ -54,30 +70,33 @@ class MySQLSource(iobase.BoundedSource):
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.split`"""
+        if not self._counts or self._chunk_size:
+            self._build_value()
+
         if start_position is None:
             start_position = 0
         if stop_position is None:
-            stop_position = self.counts
+            stop_position = self._counts
 
         bundle_start = start_position
-        bundle_stop = self.chunk_size
+        bundle_stop = self._chunk_size
         while bundle_start < stop_position:
             yield iobase.SourceBundle(
                 weight=desired_bundle_size, source=self, start_position=bundle_start, stop_position=bundle_stop
             )
 
             bundle_start = bundle_stop
-            bundle_stop += self.chunk_size
+            bundle_stop += self._chunk_size
 
     def _build_value(self):
-        for k, v in self.config.items():
-            self.config[k] = get_runtime_value(v)
-        self.query = cleanse_query(get_runtime_value(self.query))
+        for k, v in self._config.items():
+            self._config[k] = get_runtime_value(v)
+        self._query = cleanse_query(get_runtime_value(self._query))
 
-        self.client = MySQLClient(self.config)
+        self._client = MySQLClient(self._config)
 
-        rough_counts = self.client.rough_counts_estimator(self.query)
-        self.counts = rough_counts
+        rough_counts = self._client.rough_counts_estimator(self._query)
+        self._counts = rough_counts
 
         # OPTIMIZE: fix algorithm to calculate chunk size
-        self.chunk_size = self.counts // 10000
+        self._chunk_size = self._counts // 10000
