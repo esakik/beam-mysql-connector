@@ -15,12 +15,12 @@ class MySQLSource(iobase.BoundedSource):
 
     def __init__(self, query: str, config: Dict):
         super().__init__()
-        self._query = query
-        self._config = config
+        self.query = query
+        self.config = config
 
     def estimate_size(self):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.estimate_size`"""
-        return self._counts
+        return self.counts
 
     def get_range_tracker(self, start_position, stop_position):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.get_range_tracker`"""
@@ -29,13 +29,13 @@ class MySQLSource(iobase.BoundedSource):
         if start_position is None:
             start_position = 0
         if stop_position is None:
-            stop_position = self._counts
+            stop_position = self.counts
 
         return OffsetRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.read`"""
-        record_generator = self._client.record_generator(self._query)
+        record_generator = self.client.record_generator(self.query)
 
         for i in range(range_tracker.start_position(), range_tracker.stop_position()):
             next_object = next(record_generator, None)
@@ -57,27 +57,27 @@ class MySQLSource(iobase.BoundedSource):
         if start_position is None:
             start_position = 0
         if stop_position is None:
-            stop_position = self._counts
+            stop_position = self.counts
 
         bundle_start = start_position
-        bundle_stop = self._chunk_size
+        bundle_stop = self.chunk_size
         while bundle_start < stop_position:
             yield iobase.SourceBundle(
                 weight=desired_bundle_size, source=self, start_position=bundle_start, stop_position=bundle_stop
             )
 
             bundle_start = bundle_stop
-            bundle_stop += self._chunk_size
+            bundle_stop += self.chunk_size
 
     def _build_value(self):
-        for k, v in self._config.items():
-            self._config[k] = get_runtime_value(v)
-        self._query = cleanse_query(get_runtime_value(self._query))
+        for k, v in self.config.items():
+            self.config[k] = get_runtime_value(v)
+        self.query = cleanse_query(get_runtime_value(self.query))
 
-        self._client = MySQLClient(self._config)
+        self.client = MySQLClient(self.config)
 
-        rough_counts = self._client.rough_counts_estimator(self._query)
-        self._counts = rough_counts
+        rough_counts = self.client.rough_counts_estimator(self.query)
+        self.counts = rough_counts
 
         # OPTIMIZE: fix algorithm to calculate chunk size
-        self._chunk_size = self._counts // 10000
+        self.chunk_size = self.counts // 10000
