@@ -24,24 +24,39 @@ class ReadFromMySQL(PTransform):
         self._password = password
         self._port = port
 
-        self._config = {
-            "host": self._host,
-            "database": self._database,
-            "user": self._user,
-            "password": self._password,
-            "port": self._port,
-        }
-
     def expand(self, pcoll: PCollection) -> PCollection:
-        return pcoll | iobase.Read(MySQLSource(self._query, self._config))
+        return pcoll | iobase.Read(
+            MySQLSource(self._query, self._host, self._database, self._user, self._password, self._port)
+        )
 
 
 class WriteToMySQL(PTransform):
     """Write dict rows to MySQL."""
 
     def __init__(
-        self, host: str, database: str, table: str, user: str, password: str, port: int = 3306, batch_size: int = 0
+        self, host: str, database: str, table: str, user: str, password: str, port: int = 3306, batch_size: int = 1000
     ):
+        super().__init__()
+        self._host = host
+        self._database = database
+        self._table = table
+        self._user = user
+        self._password = password
+        self._port = port
+        self._batch_size = batch_size
+
+    def expand(self, pcoll: PCollection) -> PCollection:
+        return pcoll | beam.ParDo(
+            _WriteToMySQLFn(
+                self._host, self._database, self._table, self._user, self._password, self._port, self._batch_size
+            )
+        )
+
+
+class _WriteToMySQLFn(beam.DoFn):
+    """DoFn for WriteToMySQL."""
+
+    def __init__(self, host: str, database: str, table: str, user: str, password: str, port: int, batch_size: int):
         super().__init__()
         self._host = host
         self._database = database
@@ -58,19 +73,6 @@ class WriteToMySQL(PTransform):
             "password": self._password,
             "port": self._port,
         }
-
-    def expand(self, pcoll: PCollection) -> PCollection:
-        return pcoll | beam.ParDo(_WriteToMySQLFn(self._config, self._table, self._batch_size))
-
-
-class _WriteToMySQLFn(beam.DoFn):
-    """DoFn for WriteToMySQL."""
-
-    def __init__(self, config: Dict, table: str, batch_size: int):
-        super().__init__()
-        self._config = config
-        self._table = table
-        self._batch_size = batch_size
 
     def start_bundle(self):
         self._build_value()
