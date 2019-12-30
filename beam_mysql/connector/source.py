@@ -1,7 +1,5 @@
 """A source that reads a finite amount of records on mysql."""
 
-from typing import Dict
-
 from apache_beam.io import iobase
 from apache_beam.io.range_trackers import OffsetRangeTracker
 
@@ -22,8 +20,7 @@ class MySQLSource(iobase.BoundedSource):
         self._password = password
         self._port = port
 
-        self._counts = 0
-        self._chunk_size = 0
+        self._is_builded = False
 
         self._config = {
             "host": self._host,
@@ -39,7 +36,7 @@ class MySQLSource(iobase.BoundedSource):
 
     def get_range_tracker(self, start_position, stop_position):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.get_range_tracker`"""
-        if not self._counts:
+        if not self._is_builded:
             self._build_value()
 
         if start_position is None:
@@ -70,7 +67,7 @@ class MySQLSource(iobase.BoundedSource):
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.split`"""
-        if not self._counts or self._chunk_size:
+        if not self._is_builded:
             self._build_value()
 
         if start_position is None:
@@ -100,3 +97,5 @@ class MySQLSource(iobase.BoundedSource):
 
         # OPTIMIZE: fix algorithm to calculate chunk size
         self._chunk_size = self._counts // 10000
+
+        self._is_builded = True
