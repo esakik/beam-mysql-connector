@@ -7,14 +7,24 @@ from beam_mysql.connector.client import MySQLClient
 from beam_mysql.connector.utils import cleanse_query
 from beam_mysql.connector.utils import get_runtime_value
 
-_COUNTS_RANGE_BUFFER = 10
-_COUNTS_SPLIT_SIZE = 10000
-
 
 class MySQLSource(iobase.BoundedSource):
     """A source object of mysql."""
 
-    def __init__(self, query: str, host: str, database: str, user: str, password: str, port: int):
+    DEFAULT_BUFFER_SIZE = 10
+    DEFAULT_SPLIT_SIZE = 10000
+
+    def __init__(
+        self,
+        query: str,
+        host: str,
+        database: str,
+        user: str,
+        password: str,
+        port: int,
+        buffer_size: int = DEFAULT_BUFFER_SIZE,
+        split_size: int = DEFAULT_SPLIT_SIZE,
+    ):
         super().__init__()
         self._query = query
         self._host = host
@@ -22,6 +32,8 @@ class MySQLSource(iobase.BoundedSource):
         self._user = user
         self._password = password
         self._port = port
+        self._buffer_size = buffer_size
+        self._split_size = split_size
 
         self._is_builded = False
 
@@ -46,16 +58,14 @@ class MySQLSource(iobase.BoundedSource):
             start_position = 0
         if stop_position is None:
             # OPTIMIZE: fix algorithm to calculate stop position
-            stop_position = self._counts * _COUNTS_RANGE_BUFFER
+            stop_position = self._counts * self._buffer_size
 
         return OffsetRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.read`"""
-        record_generator = self._client.record_generator(self._query)
-
         for i in range(range_tracker.start_position(), range_tracker.stop_position()):
-            next_object = next(record_generator, None)
+            next_object = next(self._record_generator, None)
 
             if not next_object or not range_tracker.try_claim(i):
                 return
@@ -89,10 +99,12 @@ class MySQLSource(iobase.BoundedSource):
 
         self._client = MySQLClient(self._config)
 
+        self._record_generator = self._client.record_generator(self._query)
+
         rough_counts = self._client.rough_counts_estimator(self._query)
         self._counts = rough_counts
 
         # OPTIMIZE: fix algorithm to calculate chunk size
-        self._chunk_size = self._counts // _COUNTS_SPLIT_SIZE
+        self._chunk_size = self._counts // self._split_size
 
         self._is_builded = True
