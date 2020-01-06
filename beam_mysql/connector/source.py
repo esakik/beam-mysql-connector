@@ -52,10 +52,8 @@ class MySQLSource(iobase.BoundedSource):
 
     def read(self, range_tracker):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.read`"""
-        record_generator = self._client.record_generator(self._query)
-
         for i in range(range_tracker.start_position(), range_tracker.stop_position()):
-            next_object = next(record_generator, None)
+            next_object = next(self._record_generator, None)
 
             if not next_object or not range_tracker.try_claim(i):
                 return
@@ -88,6 +86,8 @@ class MySQLSource(iobase.BoundedSource):
         self._query = cleanse_query(get_runtime_value(self._query))
 
         self._client = MySQLClient(self._config)
+
+        self._record_generator = self._client.record_generator(self._query)
 
         rough_counts = self._client.rough_counts_estimator(self._query)
         self._counts = rough_counts
