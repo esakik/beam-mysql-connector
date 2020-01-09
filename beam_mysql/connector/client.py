@@ -21,12 +21,13 @@ class MySQLClient:
         self._config = config
         self._validate_config(self._config)
 
-    def record_generator(self, query: str) -> Generator[Dict, None, None]:
+    def record_generator(self, query: str, dictionary=True) -> Generator[Dict, None, None]:
         """
         Generate dict record from raw data on mysql.
 
         Args:
             query: query with select statement
+            dictionary: the type of result is dict if true else tuple
 
         Returns:
             dict record
@@ -38,7 +39,7 @@ class MySQLClient:
 
         with _MySQLConnection(self._config) as conn:
             # buffered is false because it can be assumed that the data size is too large
-            cur = conn.cursor(buffered=False, dictionary=True)
+            cur = conn.cursor(buffered=False, dictionary=dictionary)
 
             try:
                 cur.execute(query)
@@ -83,7 +84,7 @@ class MySQLClient:
                 for record in records:
                     # Query of the argument should be "DERIVED" because it is sub query of explain select.
                     # Count query should be "PRIMARY" or "SIMPLE" because it is not sub query.
-                    if record["select_type"] == "PRIMARY" or "SIMPLE":
+                    if record["select_type"] in ("PRIMARY", "SIMPLE"):
                         total_number = record["rows"]
             except MySQLConnectorError as e:
                 raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")

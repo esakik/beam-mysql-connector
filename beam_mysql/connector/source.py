@@ -1,9 +1,9 @@
 """A source that reads a finite amount of records on mysql."""
 
 from apache_beam.io import iobase
-from apache_beam.io.range_trackers import OffsetRangeTracker
 
 from beam_mysql.connector.client import MySQLClient
+from beam_mysql.connector.procedure import BaseProcedure
 from beam_mysql.connector.utils import cleanse_query
 from beam_mysql.connector.utils import get_runtime_value
 
@@ -11,19 +11,8 @@ from beam_mysql.connector.utils import get_runtime_value
 class MySQLSource(iobase.BoundedSource):
     """A source object of mysql."""
 
-    DEFAULT_BUFFER_SIZE = 10
-    DEFAULT_SPLIT_SIZE = 10000
-
     def __init__(
-        self,
-        query: str,
-        host: str,
-        database: str,
-        user: str,
-        password: str,
-        port: int,
-        buffer_size: int = DEFAULT_BUFFER_SIZE,
-        split_size: int = DEFAULT_SPLIT_SIZE,
+        self, query: str, host: str, database: str, user: str, password: str, port: int, procedure: BaseProcedure,
     ):
         super().__init__()
         self._query = query
@@ -32,8 +21,6 @@ class MySQLSource(iobase.BoundedSource):
         self._user = user
         self._password = password
         self._port = port
-        self._buffer_size = buffer_size
-        self._split_size = split_size
 
         self._is_builded = False
 
@@ -45,66 +32,38 @@ class MySQLSource(iobase.BoundedSource):
             "port": self._port,
         }
 
+        self._procedure = procedure
+
     def estimate_size(self):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.estimate_size`"""
-        return self._counts
+        return self._procedure.estimate_size()
 
     def get_range_tracker(self, start_position, stop_position):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.get_range_tracker`"""
         if not self._is_builded:
             self._build_value()
 
-        if start_position is None:
-            start_position = 0
-        if stop_position is None:
-            # OPTIMIZE: fix algorithm to calculate stop position
-            stop_position = self._counts * self._buffer_size
-
-        return OffsetRangeTracker(start_position, stop_position)
+        return self._procedure.get_range_tracker(start_position, stop_position)
 
     def read(self, range_tracker):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.read`"""
-        for i in range(range_tracker.start_position(), range_tracker.stop_position()):
-            next_object = next(self._record_generator, None)
-
-            if not next_object or not range_tracker.try_claim(i):
-                return
-
-            yield next_object
+        for record in self._procedure.read(range_tracker):
+            yield record
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.split`"""
         if not self._is_builded:
             self._build_value()
 
-        if start_position is None:
-            start_position = 0
-        if stop_position is None:
-            stop_position = self._counts
-
-        bundle_start = start_position
-        bundle_stop = self._chunk_size
-        while bundle_start < stop_position:
-            yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self, start_position=bundle_start, stop_position=bundle_stop
-            )
-
-            bundle_start = bundle_stop
-            bundle_stop += self._chunk_size
+        for split in self._procedure.split(desired_bundle_size, start_position, stop_position):
+            yield split
 
     def _build_value(self):
         for k, v in self._config.items():
             self._config[k] = get_runtime_value(v)
+
         self._query = cleanse_query(get_runtime_value(self._query))
-
         self._client = MySQLClient(self._config)
-
-        self._record_generator = self._client.record_generator(self._query)
-
-        rough_counts = self._client.rough_counts_estimator(self._query)
-        self._counts = rough_counts
-
-        # OPTIMIZE: fix algorithm to calculate chunk size
-        self._chunk_size = self._counts // self._split_size
+        self._procedure.build_source(self)
 
         self._is_builded = True
