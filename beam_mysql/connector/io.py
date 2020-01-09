@@ -8,6 +8,7 @@ from apache_beam.pvalue import PCollection
 from apache_beam.transforms.core import PTransform
 
 from beam_mysql.connector.client import MySQLClient
+from beam_mysql.connector.procedure import DefaultProcedure
 from beam_mysql.connector.source import MySQLSource
 from beam_mysql.connector.utils import get_runtime_value
 
@@ -15,7 +16,16 @@ from beam_mysql.connector.utils import get_runtime_value
 class ReadFromMySQL(PTransform):
     """Create PCollection from MySQL."""
 
-    def __init__(self, query: str, host: str, database: str, user: str, password: str, port: int = 3306):
+    def __init__(
+        self,
+        query: str,
+        host: str,
+        database: str,
+        user: str,
+        password: str,
+        port: int = 3306,
+        follow_procedure=DefaultProcedure(),
+    ):
         super().__init__()
         self._query = query
         self._host = host
@@ -23,10 +33,13 @@ class ReadFromMySQL(PTransform):
         self._user = user
         self._password = password
         self._port = port
+        self._follow_procedure = follow_procedure
 
     def expand(self, pcoll: PCollection) -> PCollection:
         return pcoll | iobase.Read(
-            MySQLSource(self._query, self._host, self._database, self._user, self._password, self._port)
+            MySQLSource(
+                self._query, self._host, self._database, self._user, self._password, self._port, self._follow_procedure
+            )
         )
 
 
