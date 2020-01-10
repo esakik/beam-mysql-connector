@@ -68,6 +68,7 @@ class IdsProcedure(BaseProcedure):
         return LexicographicKeyRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
+        # TODO ids match
         query = self._source._query.format(ids=range_tracker.start_position())
 
         for record in self._source._client.record_generator(query):
@@ -75,7 +76,7 @@ class IdsProcedure(BaseProcedure):
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         def _generate_source(_source, _tmp_list):
-            _ids = ",".join(_tmp_list)
+            _ids = ",".join([f"'{t}'" for t in _tmp_list])
             _tmp_list.clear()
 
             return iobase.SourceBundle(
