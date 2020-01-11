@@ -1,4 +1,4 @@
-"""Sources and sinks of mysql."""
+"""I/O connectors of mysql."""
 
 from typing import Dict
 
