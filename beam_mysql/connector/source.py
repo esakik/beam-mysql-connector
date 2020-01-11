@@ -2,8 +2,8 @@
 
 from apache_beam.io import iobase
 
+from beam_mysql.connector import splitters
 from beam_mysql.connector.client import MySQLClient
-from beam_mysql.connector.procedure import BaseProcedure
 from beam_mysql.connector.utils import cleanse_query
 from beam_mysql.connector.utils import get_runtime_value
 
@@ -12,7 +12,14 @@ class MySQLSource(iobase.BoundedSource):
     """A source object of mysql."""
 
     def __init__(
-        self, query: str, host: str, database: str, user: str, password: str, port: int, procedure: BaseProcedure,
+        self,
+        query: str,
+        host: str,
+        database: str,
+        user: str,
+        password: str,
+        port: int,
+        splitter: splitters.BaseSplitter,
     ):
         super().__init__()
         self._query = query
@@ -32,22 +39,22 @@ class MySQLSource(iobase.BoundedSource):
             "port": self._port,
         }
 
-        self._procedure = procedure
+        self._splitter = splitter
 
     def estimate_size(self):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.estimate_size`"""
-        return self._procedure.estimate_size()
+        return self._splitter.estimate_size()
 
     def get_range_tracker(self, start_position, stop_position):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.get_range_tracker`"""
         if not self._is_builded:
             self._build_value()
 
-        return self._procedure.get_range_tracker(start_position, stop_position)
+        return self._splitter.get_range_tracker(start_position, stop_position)
 
     def read(self, range_tracker):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.read`"""
-        for record in self._procedure.read(range_tracker):
+        for record in self._splitter.read(range_tracker):
             yield record
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
@@ -55,15 +62,15 @@ class MySQLSource(iobase.BoundedSource):
         if not self._is_builded:
             self._build_value()
 
-        for split in self._procedure.split(desired_bundle_size, start_position, stop_position):
+        for split in self._splitter.split(desired_bundle_size, start_position, stop_position):
             yield split
 
     def _build_value(self):
         for k, v in self._config.items():
             self._config[k] = get_runtime_value(v)
 
-        self._query = cleanse_query(get_runtime_value(self._query))
-        self._client = MySQLClient(self._config)
-        self._procedure.build_source(self)
+        self.query = cleanse_query(get_runtime_value(self._query))
+        self.client = MySQLClient(self._config)
+        self._splitter.build_source(self)
 
         self._is_builded = True
