@@ -87,6 +87,9 @@ class IdsSplitter(BaseSplitter):
         if not re.search("({ids})", self.source.query.replace(" ", "")):
             raise ValueError(f"Require ids key on query if use 'IdsSplitter': {self.source.query}")
 
+        if not range_tracker.start_position():
+            range_tracker._start_position = ",".join([f"'{id}'" for id in self._generate_ids_fn()])
+
         query = self.source.query.format(ids=range_tracker.start_position())
 
         for record in self.source.client.record_generator(query):
