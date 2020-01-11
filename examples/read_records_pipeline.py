@@ -3,6 +3,7 @@
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 
+from beam_mysql.connector import splitters
 from beam_mysql.connector.io import ReadFromMySQL
 
 
@@ -30,6 +31,7 @@ def run():
         user=options.user,
         password=options.password,
         port=options.port,
+        splitter=splitters.NoSplitter(),  # you can select how to split datasets
     )
 
     (
