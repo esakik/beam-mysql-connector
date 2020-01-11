@@ -1,4 +1,4 @@
-"""A wrapper class of `~apache_beam.io.iobase.BoundedSource`."""
+"""A wrapper class of `~apache_beam.io.iobase.BoundedSource` functions."""
 
 import re
 from abc import ABCMeta
@@ -73,8 +73,8 @@ class NoSplitter(BaseSplitter):
 class IdsSplitter(BaseSplitter):
     """Split bounded source by any ids."""
 
-    def __init__(self, ids_generate_fn: Callable[[], Union[List, Generator]], batch_size: int = 1000):
-        self._ids_generate_fn = ids_generate_fn
+    def __init__(self, generate_ids_fn: Callable[[], Union[List, Generator]], batch_size: int = 1000):
+        self._generate_ids_fn = generate_ids_fn
         self._batch_size = batch_size
 
     def estimate_size(self):
@@ -87,6 +87,9 @@ class IdsSplitter(BaseSplitter):
         if not re.search("({ids})", self.source.query.replace(" ", "")):
             raise ValueError(f"Require ids key on query if use 'IdsSplitter': {self.source.query}")
 
+        if not range_tracker.start_position():
+            range_tracker._start_position = ",".join([f"'{id}'" for id in self._generate_ids_fn()])
+
         query = self.source.query.format(ids=range_tracker.start_position())
 
         for record in self.source.client.record_generator(query):
@@ -94,7 +97,7 @@ class IdsSplitter(BaseSplitter):
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         ids = []
-        for generated_id in self._ids_generate_fn():
+        for generated_id in self._generate_ids_fn():
             if len(ids) == self._batch_size:
                 yield self._create_bundle_source(desired_bundle_size, self.source, ids)
             else:
