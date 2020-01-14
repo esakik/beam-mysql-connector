@@ -65,7 +65,7 @@ class NoSplitter(BaseSplitter):
         if stop_position is None:
             stop_position = OffsetRangeTracker.OFFSET_INFINITY
 
-        return iobase.SourceBundle(
+        yield iobase.SourceBundle(
             weight=desired_bundle_size, source=self, start_position=start_position, stop_position=stop_position
         )
 
