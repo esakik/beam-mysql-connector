@@ -65,7 +65,7 @@ class NoSplitter(BaseSplitter):
         if stop_position is None:
             stop_position = OffsetRangeTracker.OFFSET_INFINITY
 
-        return iobase.SourceBundle(
+        yield iobase.SourceBundle(
             weight=desired_bundle_size, source=self, start_position=start_position, stop_position=stop_position
         )
 
@@ -84,11 +84,10 @@ class IdsSplitter(BaseSplitter):
         return LexicographicKeyRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
-        if not re.search("({ids})", self.source.query.replace(" ", "")):
-            raise ValueError(f"Require ids key on query if use 'IdsSplitter': {self.source.query}")
-
-        if not range_tracker.start_position():
+        if range_tracker.start_position() is None:
             range_tracker._start_position = ",".join([f"'{id}'" for id in self._generate_ids_fn()])
+        elif not range_tracker.start_position():
+            return None
 
         query = self.source.query.format(ids=range_tracker.start_position())
 
@@ -96,19 +95,37 @@ class IdsSplitter(BaseSplitter):
             yield record
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
-        ids = []
-        for generated_id in self._generate_ids_fn():
-            if len(ids) == self._batch_size:
-                yield self._create_bundle_source(desired_bundle_size, self.source, ids)
-            else:
-                ids.append(generated_id)
+        condensed_query = self.source.query.lower().replace(" ", "")
 
-        yield self._create_bundle_source(desired_bundle_size, self.source, ids)
+        if not re.search(r"in\({ids}\)", condensed_query):
+            raise ValueError(f"Require 'in' phrase and 'ids' key on query if use 'IdsSplitter': {self.source.query}")
+        elif re.search(r"notin\({ids}\)", condensed_query):
+            ids = [generated_id for generated_id in self._generate_ids_fn()]
+
+            for i in range(1, self._batch_size):
+                yield self._create_bundle_source(desired_bundle_size, self.source, [])
+
+            yield self._create_bundle_source(desired_bundle_size, self.source, ids)
+        else:
+            ids = []
+
+            for generated_id in self._generate_ids_fn():
+                if len(ids) == self._batch_size:
+                    yield self._create_bundle_source(desired_bundle_size, self.source, ids)
+                    ids.clear()
+                else:
+                    ids.append(generated_id)
+
+            yield self._create_bundle_source(desired_bundle_size, self.source, ids)
 
     @staticmethod
     def _create_bundle_source(desired_bundle_size, source, ids):
-        ids_str = ",".join([f"'{id}'" for id in ids])
-        ids.clear()
+        if isinstance(ids, list):
+            ids_str = ",".join([f"'{id}'" for id in ids])
+        elif isinstance(ids, str):
+            ids_str = ids
+        else:
+            raise ValueError(f"Unexpected ids: {ids}")
 
         return iobase.SourceBundle(
             weight=desired_bundle_size, source=source, start_position=ids_str, stop_position=None
