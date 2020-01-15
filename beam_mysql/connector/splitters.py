@@ -51,24 +51,17 @@ class DefaultSplitter(BaseSplitter):
         return LexicographicKeyRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
-        if range_tracker.start_position() is None:
+        if range_tracker.start_position() in (None, 1000):
             for record in self.source.client.record_generator(self.source.query):
                 yield record
-        elif not range_tracker.start_position:
-            return None
         else:
-            for record in self.source.client.record_generator(self.source.query):
-                yield record
+            return None
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
-        for i in range(1, 1000):
+        for i in range(1, 1001):
             yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self.source, start_position="", stop_position=None
+                weight=desired_bundle_size, source=self.source, start_position=i, stop_position=None
             )
-
-        yield iobase.SourceBundle(
-            weight=desired_bundle_size, source=self.source, start_position="1", stop_position=None
-        )
 
 
 class NoSplitter(BaseSplitter):
