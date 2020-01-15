@@ -41,8 +41,38 @@ class BaseSplitter(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class NoSplitter(BaseSplitter):
+class DefaultSplitter(BaseSplitter):
     """No split bounded source."""
+
+    def estimate_size(self):
+        return 0
+
+    def get_range_tracker(self, start_position, stop_position):
+        return LexicographicKeyRangeTracker(start_position, stop_position)
+
+    def read(self, range_tracker):
+        if range_tracker.start_position() is None:
+            for record in self.source.client.record_generator(self.source.query):
+                yield record
+        elif not range_tracker.start_position:
+            return None
+        else:
+            for record in self.source.client.record_generator(self.source.query):
+                yield record
+
+    def split(self, desired_bundle_size, start_position=None, stop_position=None):
+        for i in range(1, 1000):
+            yield iobase.SourceBundle(
+                weight=desired_bundle_size, source=self.source, start_position="", stop_position=None
+            )
+
+        yield iobase.SourceBundle(
+            weight=desired_bundle_size, source=self.source, start_position="1", stop_position=None
+        )
+
+
+class NoSplitter(BaseSplitter):
+    """No split bounded source and prohibit scale."""
 
     def estimate_size(self):
         return 0

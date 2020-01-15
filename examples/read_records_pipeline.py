@@ -31,7 +31,7 @@ def run():
         user=options.user,
         password=options.password,
         port=options.port,
-        splitter=splitters.NoSplitter(),  # you can select how to split datasets
+        splitter=splitters.DefaultSplitter(),  # you can select how to split datasets
     )
 
     (
