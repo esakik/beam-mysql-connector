@@ -4,9 +4,7 @@ import re
 from abc import ABCMeta
 from abc import abstractmethod
 from typing import Callable
-from typing import Generator
-from typing import List
-from typing import Union
+from typing import Iterator
 
 from apache_beam.io import iobase
 from apache_beam.io.range_trackers import LexicographicKeyRangeTracker
@@ -96,7 +94,7 @@ class NoSplitter(BaseSplitter):
 class IdsSplitter(BaseSplitter):
     """Split bounded source by any ids."""
 
-    def __init__(self, generate_ids_fn: Callable[[], Union[List, Generator]], batch_size: int = 1000):
+    def __init__(self, generate_ids_fn: Callable[[], Iterator], batch_size: int = 1000):
         self._generate_ids_fn = generate_ids_fn
         self._batch_size = batch_size
 
