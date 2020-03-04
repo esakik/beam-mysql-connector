@@ -54,8 +54,8 @@ PACKAGE_KEYWORDS = "apache beam mysql connector"
 PACKAGE_LONG_DESCRIPTION = README
 
 REQUIRED_PACKAGES = [
-    "apache-beam==2.15.*",
-    "mysql-connector-python==8.0.*",
+    "apache-beam>=2.15.*",
+    "mysql-connector-python>=8.0.*",
 ]
 
 setup(
