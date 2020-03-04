@@ -14,7 +14,6 @@ pip install beam-mysql-connector
 ## Getting Started
 - Read From MySQL
 ```Python
-from beam_mysql.connector import splitters
 from beam_mysql.connector.io import ReadFromMySQL
 
 
@@ -25,7 +24,6 @@ read_from_mysql = ReadFromMySQL(
         user="test",
         password="test",
         port=3306,
-        splitter=splitters.DefaultSplitter(),  # you can select how to split datasets
 )
 ```
 
@@ -46,4 +44,4 @@ write_to_mysql = WriteToMySQL(
 ```
 
 ## License
-MIT License. Please refer to the [LICENSE.txt](./LICENSE.txt), for further details.
+MIT License. Please refer to the [LICENSE.txt](https://github.com/esaki01/beam-mysql-connector/blob/master/LICENSE.txt), for further details.
