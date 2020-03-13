@@ -42,31 +42,56 @@ class BaseSplitter(metaclass=ABCMeta):
 class DefaultSplitter(BaseSplitter):
     """No split bounded source."""
 
+    def __init__(self, batch_size: int = 1000):
+        self._batch_size = batch_size
+        self._counts = 0
+
     def estimate_size(self):
-        return 0
+        self._counts = self.source.client.counts_estimator(self.source.query)
+        return self._counts
 
     def get_range_tracker(self, start_position, stop_position):
+        if self._counts == 0:
+            self._counts = self.source.client.counts_estimator(self.source.query)
+        if start_position is None:
+            start_position = 0
+        if stop_position is None:
+            stop_position = self._counts
+
         return LexicographicKeyRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
-        if range_tracker.start_position() in (None, 1000):
-            for record in self.source.client.record_generator(self.source.query):
-                yield record
-        else:
-            return None
+        offset, limit = range_tracker.start_position(), range_tracker.stop_position()
+        query = f"SELECT * FROM ({self.source.query}) as subq LIMIT {limit} OFFSET {offset}"
+        for record in self.source.client.record_generator(query):
+            yield record
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
-        for i in range(1, 1001):
+        if self._counts == 0:
+            self._counts = self.source.client.counts_estimator(self.source.query)
+        if start_position is None:
+            start_position = 0
+        if stop_position is None:
+            stop_position = self._counts
+
+        last_start_position = 0
+        for offset in range(start_position, stop_position, self._batch_size):
             yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self.source, start_position=i, stop_position=None
+                weight=desired_bundle_size, source=self.source, start_position=offset, stop_position=self._batch_size
             )
+            last_start_position = offset
+
+        yield iobase.SourceBundle(
+            weight=desired_bundle_size, source=self.source, start_position=last_start_position + 1,
+            stop_position=self._counts
+        )
 
 
 class NoSplitter(BaseSplitter):
     """No split bounded source and prohibit scale."""
 
     def estimate_size(self):
-        return 0
+        return self.source.client.rough_counts_estimator(self.source.query)
 
     def get_range_tracker(self, start_position, stop_position):
         if start_position is None:
@@ -99,44 +124,36 @@ class IdsSplitter(BaseSplitter):
         self._batch_size = batch_size
 
     def estimate_size(self):
-        return 0
+        return self.source.client.rough_counts_estimator(self.source.query)
 
     def get_range_tracker(self, start_position, stop_position):
         return LexicographicKeyRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
         if range_tracker.start_position() is None:
-            range_tracker._start_position = ",".join([f"'{id}'" for id in self._generate_ids_fn()])
-        elif not range_tracker.start_position():
-            return None
+            ids = ",".join([f"'{id}'" for id in self._generate_ids_fn()])
+        else:
+            ids = range_tracker.start_position()
 
-        query = self.source.query.format(ids=range_tracker.start_position())
-
+        query = self.source.query.format(ids=ids)
         for record in self.source.client.record_generator(query):
             yield record
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         condensed_query = self.source.query.lower().replace(" ", "")
-
         if not re.search(r"in\({ids}\)", condensed_query):
             raise ValueError(f"Require 'in' phrase and 'ids' key on query if use 'IdsSplitter': {self.source.query}")
         elif re.search(r"notin\({ids}\)", condensed_query):
             ids = [generated_id for generated_id in self._generate_ids_fn()]
-
-            for i in range(1, self._batch_size):
-                yield self._create_bundle_source(desired_bundle_size, self.source, [])
-
             yield self._create_bundle_source(desired_bundle_size, self.source, ids)
         else:
             ids = []
-
             for generated_id in self._generate_ids_fn():
                 if len(ids) == self._batch_size:
                     yield self._create_bundle_source(desired_bundle_size, self.source, ids)
                     ids.clear()
                 else:
                     ids.append(generated_id)
-
             yield self._create_bundle_source(desired_bundle_size, self.source, ids)
 
     @staticmethod

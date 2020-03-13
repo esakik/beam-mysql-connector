@@ -52,6 +52,38 @@ class MySQLClient:
 
             cur.close()
 
+    def counts_estimator(self, query: str) -> int:
+        """
+        Make a estimate of the total number of records.
+
+        Args:
+            query: query with select statement
+
+        Returns:
+            the total number of records
+
+        Raises:
+            ~beam_mysql.connector.errors.MySQLClientError
+        """
+        self._validate_query(query, [_SELECT_STATEMENT])
+        count_query = f"SELECT COUNT(*) AS count FROM ({query}) as subq"
+
+        with _MySQLConnection(self._config) as conn:
+            # buffered is false because it can be assumed that the data size is too large
+            cur = conn.cursor(buffered=False, dictionary=True)
+
+            try:
+                cur.execute(count_query)
+                logging.info(f"Successfully execute query: {count_query}")
+
+                record = cur.fetchone()
+            except MySQLConnectorError as e:
+                raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")
+
+            cur.close()
+
+            return record["count"]
+
     def rough_counts_estimator(self, query: str) -> int:
         """
         Make a rough estimate of the total number of records.
