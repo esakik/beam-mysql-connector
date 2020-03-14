@@ -10,7 +10,7 @@ from tests.test_base import TestBase
 
 
 class TestReadRecordsPipeline(TestBase):
-    def test_pipeline_default_splitter(self):
+    def test_pipeline_no_splitter(self):
         expected = [{"id": 1, "name": "test data1"}, {"id": 2, "name": "test data2"}]
 
         with TestPipeline() as p:
@@ -22,7 +22,7 @@ class TestReadRecordsPipeline(TestBase):
                 user="root",
                 password="root",
                 port=3307,
-                splitter=splitters.DefaultSplitter(),
+                splitter=splitters.NoSplitter(),
             )
 
             actual = p | read_from_mysql
