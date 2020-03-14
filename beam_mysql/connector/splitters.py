@@ -3,6 +3,7 @@
 import re
 from abc import ABCMeta
 from abc import abstractmethod
+from datetime import datetime
 from typing import Callable
 from typing import Iterator
 
@@ -10,6 +11,7 @@ from apache_beam.io import iobase
 from apache_beam.io.range_trackers import LexicographicKeyRangeTracker
 from apache_beam.io.range_trackers import OffsetRangeTracker
 from apache_beam.io.range_trackers import UnsplittableRangeTracker
+from dateutil.relativedelta import relativedelta
 
 
 class BaseSplitter(metaclass=ABCMeta):
@@ -213,7 +215,58 @@ class PartitionsSplitter(BaseSplitter):
     def _validate_query(self):
         condensed_query = self.source.query.lower().replace(" ", "")
         if not re.search(r"partition\((,?p\d{6})+\)", condensed_query):
-            example = "SELECT * FROM tests PARTITION ({partitions})"
-            raise ValueError(
-                f"Require 'partition' phrase and 'partitions' key on query: {self.source.query}, e.g. '{example}'"
+            example = "SELECT * FROM tests PARTITION (p202001,p202002)"
+            raise ValueError(f"Require 'partition' phrase on query: {self.source.query}, e.g. '{example}'")
+
+
+class DateSplitter(BaseSplitter):
+    """Split bounded source by partitions."""
+
+    PATTERN = r"[\w\s]+[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*[\w\s]+[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*"
+
+    def estimate_size(self):
+        return self.source.client.rough_counts_estimator(self.source.query)
+
+    def get_range_tracker(self, start_position, stop_position):
+        self._validate_query()
+        return LexicographicKeyRangeTracker(start_position, stop_position)
+
+    def read(self, range_tracker):
+        if range_tracker.start_position() is None:
+            query = self.source.query
+        else:
+            start_date, end_date = range_tracker.start_position(), range_tracker.stop_position()
+            match = re.match(self.PATTERN, self.source.query)
+            query = self.source.query.replace(match.group(1), start_date).replace(match.group(2), end_date)
+
+        for record in self.source.client.record_generator(query):
+            yield record
+
+    def split(self, desired_bundle_size, start_position=None, stop_position=None):
+        self._validate_query()
+
+        match = re.match(self.PATTERN, self.source.query)
+        start_date = datetime.strptime(match.group(1), "%Y-%m-%d")
+        end_date = datetime.strptime(match.group(2), "%Y-%m-%d")
+
+        months = self._diff_between_dates(start_date, end_date)
+        for month in months:
+            yield iobase.SourceBundle(
+                weight=desired_bundle_size, source=self.source, start_position=month[0], stop_position=month[1],
             )
+
+    def _validate_query(self):
+        if not re.search(self.PATTERN, self.source.query):
+            example = "SELECT * FROM tests WHERE date BETWEEN 2019-01 AND 2020-01"
+            raise ValueError(f"Require 'between' phrase on query: {self.source.query}, e.g. '{example}'")
+
+    @staticmethod
+    def _diff_between_dates(start_date, end_date):
+        diff_months = (end_date.year * 12 + end_date.month) - (start_date.year * 12 + start_date.month)
+        tuple_months = [
+            (start_date + relativedelta(months=i), start_date + relativedelta(months=i + 1) - relativedelta(days=1))
+            for i in range(diff_months + 1)
+        ]
+        return [
+            (tuple_month[0].strftime("%Y-%m-%d"), tuple_month[1].strftime("%Y-%m-%d")) for tuple_month in tuple_months
+        ]
