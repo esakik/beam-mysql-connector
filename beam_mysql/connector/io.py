@@ -25,7 +25,7 @@ class ReadFromMySQL(PTransform):
         user: str,
         password: str,
         port: int = 3306,
-        splitter=splitters.DefaultSplitter(),
+        splitter=splitters.NoSplitter(),
     ):
         super().__init__()
         self._query = query
