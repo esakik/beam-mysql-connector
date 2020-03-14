@@ -213,7 +213,7 @@ class PartitionsSplitter(BaseSplitter):
     def _validate_query(self):
         condensed_query = self.source.query.lower().replace(" ", "")
         if not re.search(r"partition\((,?p\d{6})+\)", condensed_query):
-            example = "SELECT * FROM tests PARTITION ({partitions})"
+            example = "SELECT * FROM tests PARTITION (p202001,p202002)"
             raise ValueError(
-                f"Require 'partition' phrase and 'partitions' key on query: {self.source.query}, e.g. '{example}'"
+                f"Require 'partition' phrase on query: {self.source.query}, e.g. '{example}'"
             )
