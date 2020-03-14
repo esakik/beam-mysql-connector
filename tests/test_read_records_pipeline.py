@@ -121,7 +121,7 @@ class TestReadRecordsPipeline(TestBase):
                 user="root",
                 password="root",
                 port=3307,
-                splitter=splitters.PartitionsSplitter(),
+                splitter=splitters.PartitionSplitter(),
             )
 
             actual = p | read_from_mysql
