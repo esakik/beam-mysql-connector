@@ -39,7 +39,7 @@ class BaseSplitter(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class DefaultSplitter(BaseSplitter):
+class NoSplitter(BaseSplitter):
     """No split bounded source so not work parallel."""
 
     def estimate_size(self):
@@ -178,9 +178,6 @@ class IdsSplitter(BaseSplitter):
 class PartitionsSplitter(BaseSplitter):
     """Split bounded source by partitions."""
 
-    def __init__(self, generate_partitions_fn: Callable[[], Iterator]):
-        self._generate_partitions_fn = generate_partitions_fn
-
     def estimate_size(self):
         return self.source.client.rough_counts_estimator(self.source.query)
 
@@ -190,25 +187,32 @@ class PartitionsSplitter(BaseSplitter):
 
     def read(self, range_tracker):
         if range_tracker.start_position() is None:
-            partitions = ",".join([partition for partition in self._generate_partitions_fn()])
+            query = self.source.query
         else:
-            partitions = range_tracker.start_position()
+            partition_date, partition_dates = range_tracker.start_position(), range_tracker.stop_position()
+            query = self.source.query.replace(partition_dates, partition_date)
 
-        query = self.source.query.format(partitions=partitions)
         for record in self.source.client.record_generator(query):
             yield record
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         self._validate_query()
 
-        for generated_partition in self._generate_partitions_fn():
+        match = re.match(r"(,?p\d{6})+", self.source.query)
+        partition_dates = match.group()
+        split_partition_dates = partition_dates.split(",")
+
+        for partition_date in split_partition_dates:
             yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self.source, start_position=generated_partition, stop_position=None
+                weight=desired_bundle_size,
+                source=self.source,
+                start_position=partition_date,
+                stop_position=partition_dates,
             )
 
     def _validate_query(self):
         condensed_query = self.source.query.lower().replace(" ", "")
-        if not re.search(r"partition\({partitions}\)", condensed_query):
+        if not re.search(r"partition\((,?p\d{6})+\)", condensed_query):
             example = "SELECT * FROM tests PARTITION ({partitions})"
             raise ValueError(
                 f"Require 'partition' phrase and 'partitions' key on query: {self.source.query}, e.g. '{example}'"
