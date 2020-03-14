@@ -29,7 +29,7 @@ class TestReadRecordsPipeline(TestBase):
 
             assert_that(actual, equal_to(expected))
 
-    def test_pipeline_no_splitter(self):
+    def test_pipeline_limit_offset_splitter(self):
         expected = [{"id": 1, "name": "test data1"}, {"id": 2, "name": "test data2"}]
 
         with TestPipeline() as p:
@@ -41,7 +41,7 @@ class TestReadRecordsPipeline(TestBase):
                 user="root",
                 password="root",
                 port=3307,
-                splitter=splitters.NoSplitter(),
+                splitter=splitters.LimitOffsetSplitter(),
             )
 
             actual = p | read_from_mysql
