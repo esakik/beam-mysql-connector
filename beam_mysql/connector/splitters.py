@@ -40,33 +40,10 @@ class BaseSplitter(metaclass=ABCMeta):
 
 
 class DefaultSplitter(BaseSplitter):
-    """No split bounded source."""
+    """No split bounded source so not work parallel."""
 
     def estimate_size(self):
-        return 0
-
-    def get_range_tracker(self, start_position, stop_position):
-        return LexicographicKeyRangeTracker(start_position, stop_position)
-
-    def read(self, range_tracker):
-        if range_tracker.start_position() in (None, 1000):
-            for record in self.source.client.record_generator(self.source.query):
-                yield record
-        else:
-            return None
-
-    def split(self, desired_bundle_size, start_position=None, stop_position=None):
-        for i in range(1, 1001):
-            yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self.source, start_position=i, stop_position=None
-            )
-
-
-class NoSplitter(BaseSplitter):
-    """No split bounded source and prohibit scale."""
-
-    def estimate_size(self):
-        return 0
+        return self.source.client.rough_counts_estimator(self.source.query)
 
     def get_range_tracker(self, start_position, stop_position):
         if start_position is None:
@@ -91,53 +68,98 @@ class NoSplitter(BaseSplitter):
         )
 
 
-class IdsSplitter(BaseSplitter):
-    """Split bounded source by any ids."""
+class LimitOffsetSplitter(BaseSplitter):
+    """Split bounded source by limit and offset."""
 
-    def __init__(self, generate_ids_fn: Callable[[], Iterator], batch_size: int = 1000):
-        self._generate_ids_fn = generate_ids_fn
+    def __init__(self, batch_size: int = 1000000):
         self._batch_size = batch_size
+        self._counts = 0
 
     def estimate_size(self):
-        return 0
+        self._counts = self.source.client.counts_estimator(self.source.query)
+        return self._counts
 
     def get_range_tracker(self, start_position, stop_position):
+        if self._counts == 0:
+            self._counts = self.source.client.counts_estimator(self.source.query)
+        if start_position is None:
+            start_position = 0
+        if stop_position is None:
+            stop_position = self._counts
+
         return LexicographicKeyRangeTracker(start_position, stop_position)
 
     def read(self, range_tracker):
-        if range_tracker.start_position() is None:
-            range_tracker._start_position = ",".join([f"'{id}'" for id in self._generate_ids_fn()])
-        elif not range_tracker.start_position():
-            return None
-
-        query = self.source.query.format(ids=range_tracker.start_position())
-
+        offset, limit = range_tracker.start_position(), range_tracker.stop_position()
+        query = f"SELECT * FROM ({self.source.query}) as subq LIMIT {limit} OFFSET {offset}"
         for record in self.source.client.record_generator(query):
             yield record
 
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
-        condensed_query = self.source.query.lower().replace(" ", "")
+        if self._counts == 0:
+            self._counts = self.source.client.counts_estimator(self.source.query)
+        if start_position is None:
+            start_position = 0
+        if stop_position is None:
+            stop_position = self._counts
 
-        if not re.search(r"in\({ids}\)", condensed_query):
-            raise ValueError(f"Require 'in' phrase and 'ids' key on query if use 'IdsSplitter': {self.source.query}")
-        elif re.search(r"notin\({ids}\)", condensed_query):
-            ids = [generated_id for generated_id in self._generate_ids_fn()]
+        last_position = 0
+        for offset in range(start_position, stop_position, self._batch_size):
+            yield iobase.SourceBundle(
+                weight=desired_bundle_size, source=self.source, start_position=offset, stop_position=self._batch_size
+            )
+            last_position = offset + self._batch_size
 
-            for i in range(1, self._batch_size):
-                yield self._create_bundle_source(desired_bundle_size, self.source, [])
+        yield iobase.SourceBundle(
+            weight=desired_bundle_size,
+            source=self.source,
+            start_position=last_position + 1,
+            stop_position=stop_position,
+        )
 
-            yield self._create_bundle_source(desired_bundle_size, self.source, ids)
+
+class IdsSplitter(BaseSplitter):
+    """Split bounded source by any ids."""
+
+    def __init__(self, generate_ids_fn: Callable[[], Iterator], batch_size: int = 1000000):
+        self._generate_ids_fn = generate_ids_fn
+        self._batch_size = batch_size
+
+    def estimate_size(self):
+        return self.source.client.rough_counts_estimator(self.source.query)
+
+    def get_range_tracker(self, start_position, stop_position):
+        self._validate_query()
+        return LexicographicKeyRangeTracker(start_position, stop_position)
+
+    def read(self, range_tracker):
+        if range_tracker.start_position() is None:
+            ids = ",".join([f"'{id}'" for id in self._generate_ids_fn()])
         else:
-            ids = []
+            ids = range_tracker.start_position()
 
-            for generated_id in self._generate_ids_fn():
-                if len(ids) == self._batch_size:
-                    yield self._create_bundle_source(desired_bundle_size, self.source, ids)
-                    ids.clear()
-                else:
-                    ids.append(generated_id)
+        query = self.source.query.format(ids=ids)
+        for record in self.source.client.record_generator(query):
+            yield record
 
-            yield self._create_bundle_source(desired_bundle_size, self.source, ids)
+    def split(self, desired_bundle_size, start_position=None, stop_position=None):
+        self._validate_query()
+
+        ids = []
+        for generated_id in self._generate_ids_fn():
+            ids.append(generated_id)
+            if len(ids) == self._batch_size:
+                yield self._create_bundle_source(desired_bundle_size, self.source, ids)
+                ids.clear()
+        yield self._create_bundle_source(desired_bundle_size, self.source, ids)
+
+    def _validate_query(self):
+        condensed_query = self.source.query.lower().replace(" ", "")
+        if re.search(r"notin\({ids}\)", condensed_query):
+            raise ValueError(f"Not support 'not in' phrase: {self.source.query}")
+        if not re.search(r"in\({ids}\)", condensed_query):
+            example = "SELECT * FROM tests WHERE id IN ({ids})"
+            raise ValueError(f"Require 'in' phrase and 'ids' key on query: {self.source.query}, e.g. '{example}'")
 
     @staticmethod
     def _create_bundle_source(desired_bundle_size, source, ids):
@@ -151,3 +173,43 @@ class IdsSplitter(BaseSplitter):
         return iobase.SourceBundle(
             weight=desired_bundle_size, source=source, start_position=ids_str, stop_position=None
         )
+
+
+class PartitionsSplitter(BaseSplitter):
+    """Split bounded source by partitions."""
+
+    def __init__(self, generate_partitions_fn: Callable[[], Iterator]):
+        self._generate_partitions_fn = generate_partitions_fn
+
+    def estimate_size(self):
+        return self.source.client.rough_counts_estimator(self.source.query)
+
+    def get_range_tracker(self, start_position, stop_position):
+        self._validate_query()
+        return LexicographicKeyRangeTracker(start_position, stop_position)
+
+    def read(self, range_tracker):
+        if range_tracker.start_position() is None:
+            partitions = ",".join([partition for partition in self._generate_partitions_fn()])
+        else:
+            partitions = range_tracker.start_position()
+
+        query = self.source.query.format(partitions=partitions)
+        for record in self.source.client.record_generator(query):
+            yield record
+
+    def split(self, desired_bundle_size, start_position=None, stop_position=None):
+        self._validate_query()
+
+        for generated_partition in self._generate_partitions_fn():
+            yield iobase.SourceBundle(
+                weight=desired_bundle_size, source=self.source, start_position=generated_partition, stop_position=None
+            )
+
+    def _validate_query(self):
+        condensed_query = self.source.query.lower().replace(" ", "")
+        if not re.search(r"partition\({partitions}\)", condensed_query):
+            example = "SELECT * FROM tests PARTITION ({partitions})"
+            raise ValueError(
+                f"Require 'partition' phrase and 'partitions' key on query: {self.source.query}, e.g. '{example}'"
+            )

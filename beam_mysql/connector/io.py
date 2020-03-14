@@ -6,6 +6,7 @@ import apache_beam as beam
 from apache_beam.io import iobase
 from apache_beam.pvalue import PCollection
 from apache_beam.transforms.core import PTransform
+from apache_beam.transforms.util import Reshuffle
 
 from beam_mysql.connector import splitters
 from beam_mysql.connector.client import MySQLClient
@@ -36,8 +37,14 @@ class ReadFromMySQL(PTransform):
         self._splitter = splitter
 
     def expand(self, pcoll: PCollection) -> PCollection:
-        return pcoll | iobase.Read(
-            MySQLSource(self._query, self._host, self._database, self._user, self._password, self._port, self._splitter)
+        return (
+            pcoll
+            | iobase.Read(
+                MySQLSource(
+                    self._query, self._host, self._database, self._user, self._password, self._port, self._splitter
+                )
+            )
+            | Reshuffle()
         )
 
 
