@@ -25,7 +25,7 @@ read_from_mysql = ReadFromMySQL(
         user="test",
         password="test",
         port=3306,
-        splitter=splitters.DefaultSplitter()  # you can select how to split query from splitters
+        splitter=splitters.NoSplitter()  # you can select how to split query from splitters
 )
 ```
 
