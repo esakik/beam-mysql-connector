@@ -1,6 +1,9 @@
 """A source that reads a finite amount of records on mysql."""
 
+from typing import Union
+
 from apache_beam.io import iobase
+from apache_beam.options.value_provider import ValueProvider
 
 from beam_mysql.connector import splitters
 from beam_mysql.connector.client import MySQLClient
@@ -13,12 +16,12 @@ class MySQLSource(iobase.BoundedSource):
 
     def __init__(
         self,
-        query: str,
-        host: str,
-        database: str,
-        user: str,
-        password: str,
-        port: int,
+        query: Union[str, ValueProvider],
+        host: Union[str, ValueProvider],
+        database: Union[str, ValueProvider],
+        user: Union[str, ValueProvider],
+        password: Union[str, ValueProvider],
+        port: Union[int, ValueProvider],
         splitter: splitters.BaseSplitter,
     ):
         super().__init__()

@@ -177,8 +177,10 @@ class IdsSplitter(BaseSplitter):
         )
 
 
-class PartitionsSplitter(BaseSplitter):
+class PartitionSplitter(BaseSplitter):
     """Split bounded source by partitions."""
+
+    PATTERN = r".*\((,?p\d{6})+\).*"
 
     def estimate_size(self):
         return self.source.client.rough_counts_estimator(self.source.query)
@@ -200,29 +202,32 @@ class PartitionsSplitter(BaseSplitter):
     def split(self, desired_bundle_size, start_position=None, stop_position=None):
         self._validate_query()
 
-        match = re.match(r"(,?p\d{6})+", self.source.query)
-        partition_dates = match.group()
-        split_partition_dates = partition_dates.split(",")
+        query = self.source.query
+        partitions = []
+        while True:
+            match = re.match(self.PATTERN, query)
+            if not match:
+                break
 
-        for partition_date in split_partition_dates:
+            partition = match.group(1)
+            query = query.replace(partition, "")
+            partitions.append(partition)
+
+        for p in partitions:
             yield iobase.SourceBundle(
-                weight=desired_bundle_size,
-                source=self.source,
-                start_position=partition_date,
-                stop_position=partition_dates,
+                weight=desired_bundle_size, source=self.source, start_position=p, stop_position=",".join(partitions),
             )
 
     def _validate_query(self):
-        condensed_query = self.source.query.lower().replace(" ", "")
-        if not re.search(r"partition\((,?p\d{6})+\)", condensed_query):
+        if not re.search(self.PATTERN, self.source.query):
             example = "SELECT * FROM tests PARTITION (p202001,p202002)"
             raise ValueError(f"Require 'partition' phrase on query: {self.source.query}, e.g. '{example}'")
 
 
 class DateSplitter(BaseSplitter):
-    """Split bounded source by partitions."""
+    """Split bounded source by dates."""
 
-    PATTERN = r"[\w\s]+[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*[\w\s]+[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*"
+    PATTERN = r".*[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*[\w\s]+[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*.*"
 
     def estimate_size(self):
         return self.source.client.rough_counts_estimator(self.source.query)
@@ -257,7 +262,7 @@ class DateSplitter(BaseSplitter):
 
     def _validate_query(self):
         if not re.search(self.PATTERN, self.source.query):
-            example = "SELECT * FROM tests WHERE date BETWEEN 2019-01 AND 2020-01"
+            example = "SELECT * FROM tests WHERE date BETWEEN 2019-01-01 AND 2020-01-01"
             raise ValueError(f"Require 'between' phrase on query: {self.source.query}, e.g. '{example}'")
 
     @staticmethod

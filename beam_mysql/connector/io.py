@@ -1,12 +1,13 @@
 """I/O connectors of mysql."""
 
 from typing import Dict
+from typing import Union
 
 import apache_beam as beam
 from apache_beam.io import iobase
+from apache_beam.options.value_provider import ValueProvider
 from apache_beam.pvalue import PCollection
 from apache_beam.transforms.core import PTransform
-from apache_beam.transforms.util import Reshuffle
 
 from beam_mysql.connector import splitters
 from beam_mysql.connector.client import MySQLClient
@@ -19,12 +20,12 @@ class ReadFromMySQL(PTransform):
 
     def __init__(
         self,
-        query: str,
-        host: str,
-        database: str,
-        user: str,
-        password: str,
-        port: int = 3306,
+        query: Union[str, ValueProvider],
+        host: Union[str, ValueProvider],
+        database: Union[str, ValueProvider],
+        user: Union[str, ValueProvider],
+        password: Union[str, ValueProvider],
+        port: Union[int, ValueProvider] = 3306,
         splitter=splitters.NoSplitter(),
     ):
         super().__init__()
@@ -37,14 +38,8 @@ class ReadFromMySQL(PTransform):
         self._splitter = splitter
 
     def expand(self, pcoll: PCollection) -> PCollection:
-        return (
-            pcoll
-            | iobase.Read(
-                MySQLSource(
-                    self._query, self._host, self._database, self._user, self._password, self._port, self._splitter
-                )
-            )
-            | Reshuffle()
+        return pcoll | iobase.Read(
+            MySQLSource(self._query, self._host, self._database, self._user, self._password, self._port, self._splitter)
         )
 
 
@@ -52,7 +47,14 @@ class WriteToMySQL(PTransform):
     """Write dict rows to MySQL."""
 
     def __init__(
-        self, host: str, database: str, table: str, user: str, password: str, port: int = 3306, batch_size: int = 1000
+        self,
+        host: Union[str, ValueProvider],
+        database: Union[str, ValueProvider],
+        table: Union[str, ValueProvider],
+        user: Union[str, ValueProvider],
+        password: Union[str, ValueProvider],
+        port: Union[int, ValueProvider] = 3306,
+        batch_size: int = 1000,
     ):
         super().__init__()
         self._host = host
@@ -74,7 +76,16 @@ class WriteToMySQL(PTransform):
 class _WriteToMySQLFn(beam.DoFn):
     """DoFn for WriteToMySQL."""
 
-    def __init__(self, host: str, database: str, table: str, user: str, password: str, port: int, batch_size: int):
+    def __init__(
+        self,
+        host: Union[str, ValueProvider],
+        database: Union[str, ValueProvider],
+        table: Union[str, ValueProvider],
+        user: Union[str, ValueProvider],
+        password: Union[str, ValueProvider],
+        port: Union[int, ValueProvider],
+        batch_size: int,
+    ):
         super().__init__()
         self._host = host
         self._database = database
