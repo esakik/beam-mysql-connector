@@ -193,8 +193,8 @@ class PartitionSplitter(BaseSplitter):
         if range_tracker.start_position() is None:
             query = self.source.query
         else:
-            partition_date, partition_dates = range_tracker.start_position(), range_tracker.stop_position()
-            query = self.source.query.replace(partition_dates, partition_date)
+            partition, partitions = range_tracker.start_position(), range_tracker.stop_position()
+            query = self.source.query.replace(partitions, partition)
 
         for record in self.source.client.record_generator(query):
             yield record
@@ -213,9 +213,14 @@ class PartitionSplitter(BaseSplitter):
             query = query.replace(partition, "")
             partitions.append(partition)
 
+        partitions.reverse()
         for p in partitions:
+            partition = p.replace(",", "")
             yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self.source, start_position=p, stop_position=",".join(partitions),
+                weight=desired_bundle_size,
+                source=self.source,
+                start_position=partition,
+                stop_position="".join(partitions),
             )
 
     def _validate_query(self):
