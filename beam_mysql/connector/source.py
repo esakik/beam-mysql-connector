@@ -46,6 +46,9 @@ class MySQLSource(iobase.BoundedSource):
 
     def estimate_size(self):
         """Implement :class:`~apache_beam.io.iobase.BoundedSource.estimate_size`"""
+        if not self._is_builded:
+            self._build_value()
+
         return self._splitter.estimate_size()
 
     def get_range_tracker(self, start_position, stop_position):
