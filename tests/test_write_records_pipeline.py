@@ -1,6 +1,7 @@
 """A test of write records pipeline."""
 
 import apache_beam as beam
+import datetime
 from apache_beam.testing.test_pipeline import TestPipeline
 
 from beam_mysql.connector.io import WriteToMySQL
@@ -29,17 +30,19 @@ class TestWriteRecordsPipeline(TestBase):
 
     def tearDown(self):
         cur = self.conn.cursor()
-        cur.execute(f"DELETE FROM {DATABASE}.{TABLE} WHERE id IN (3, 4)")
+        cur.execute(f"DELETE FROM {DATABASE}.{TABLE} WHERE id = 6;")
         cur.close()
         self.conn.commit()
         self.conn.close()
 
     def test_pipeline(self):
         expected = [
-            {"id": 1, "name": "test data1"},
-            {"id": 2, "name": "test data2"},
-            {"id": 3, "name": "test data3"},
-            {"id": 4, "name": "test data4"},
+            {"id": 1, "name": "test data1", "date": datetime.date(2020, 1, 1)},
+            {"id": 2, "name": "test data2", "date": datetime.date(2020, 2, 2)},
+            {"id": 3, "name": "test data3", "date": datetime.date(2020, 3, 3)},
+            {"id": 4, "name": "test data4", "date": datetime.date(2020, 4, 4)},
+            {"id": 5, "name": "test data5", "date": datetime.date(2020, 5, 5)},
+            {"id": 6, "name": "test data6", "date": datetime.date(2020, 6, 6)},
         ]
 
         with TestPipeline() as p:
@@ -54,7 +57,10 @@ class TestWriteRecordsPipeline(TestBase):
                 batch_size=BATCH_SIZE,
             )
 
-            p | beam.Create([{"id": 3, "name": "test data3"}, {"id": 4, "name": "test data4"}]) | write_to_mysql
+            (p
+             | beam.Create([{"id": 6, "name": "test data6", "date": "2020-06-06"}])
+             | write_to_mysql
+             )
 
         cur = self.conn.cursor(dictionary=True)
         cur.execute(f"SELECT * FROM {DATABASE}.{TABLE}")

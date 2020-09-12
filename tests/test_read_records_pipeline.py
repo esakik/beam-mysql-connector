@@ -3,11 +3,11 @@
 from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.testing.util import assert_that
 from apache_beam.testing.util import equal_to
+from datetime import date
 
 from beam_mysql.connector import splitters
 from beam_mysql.connector.io import ReadFromMySQL
 from tests.test_base import TestBase
-from datetime import date
 
 
 class TestReadRecordsPipeline(TestBase):
@@ -93,7 +93,7 @@ class TestReadRecordsPipeline(TestBase):
         with TestPipeline() as p:
             # Access to mysql on docker
             read_from_mysql = ReadFromMySQL(
-                query="SELECT * FROM test_db.tests WHERE date BETWEEN '2020-01-01' AND '2020-04-03';",
+                query="SELECT * FROM test_db.tests WHERE date BETWEEN '2020-01-01' AND '2020-03-03';",
                 host="0.0.0.0",
                 database="test_db",
                 user="root",
@@ -108,8 +108,8 @@ class TestReadRecordsPipeline(TestBase):
 
     def test_pipeline_partitions_splitter(self):
         expected = [
-            {"id": 1, "name": "test data1", "date": date(2020, 1, 1)},
             {"id": 2, "name": "test data2", "date": date(2020, 2, 2)},
+            {"id": 3, "name": "test data3", "date": date(2020, 3, 3)},
         ]
 
         with TestPipeline() as p:
