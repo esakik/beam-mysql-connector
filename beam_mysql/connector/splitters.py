@@ -128,7 +128,8 @@ class IdsSplitter(BaseSplitter):
         self._batch_size = batch_size
 
     def estimate_size(self):
-        return self.source.client.rough_counts_estimator(self.source.query)
+        # TODO: unify the method of estimating
+        return 0
 
     def get_range_tracker(self, start_position, stop_position):
         self._validate_query()
@@ -277,6 +278,9 @@ class DateSplitter(BaseSplitter):
             (start_date + relativedelta(months=i), start_date + relativedelta(months=i + 1) - relativedelta(days=1))
             for i in range(diff_months + 1)
         ]
+        last_date = tuple_months[-1][1]
+        tuple_months[-1] = (tuple_months[-1][0], datetime(last_date.year, last_date.month, end_date.day))
+
         return [
             (tuple_month[0].strftime("%Y-%m-%d"), tuple_month[1].strftime("%Y-%m-%d")) for tuple_month in tuple_months
         ]
