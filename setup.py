@@ -49,7 +49,7 @@ PACKAGE_DESCRIPTION = "MySQL I/O Connector of Apache Beam"
 PACKAGE_URL = "https://github.com/esaki01/beam-mysql-connector"
 PACKAGE_DOWNLOAD_URL = "https://pypi.python.org/pypi/beam-mysql-connector"
 PACKAGE_AUTHOR = "esakik"
-PACKAGE_EMAIL = "esaki1011@gmail.com"
+PACKAGE_EMAIL = "esakik.work@gmail.com"
 PACKAGE_KEYWORDS = "apache beam mysql connector"
 PACKAGE_LONG_DESCRIPTION = README
 
