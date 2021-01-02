@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `tests`
   `id`               INT(20) AUTO_INCREMENT,
   `name`             VARCHAR(20) NOT NULL,
   `date`             DATE NOT NULL,
+  `memo`             VARCHAR(50),
   PRIMARY KEY (`id`, `date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
 PARTITION BY RANGE COLUMNS(date) (

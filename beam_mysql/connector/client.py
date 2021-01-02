@@ -1,6 +1,6 @@
 """A client of mysql."""
 
-import logging
+from logging import INFO, getLogger
 from typing import Dict
 from typing import Generator
 from typing import List
@@ -12,6 +12,9 @@ from beam_mysql.connector.errors import MySQLClientError
 
 _SELECT_STATEMENT = "SELECT"
 _INSERT_STATEMENT = "INSERT"
+
+logger = getLogger(__name__)
+logger.setLevel(INFO)
 
 
 class MySQLClient:
@@ -43,7 +46,7 @@ class MySQLClient:
 
             try:
                 cur.execute(query)
-                logging.info(f"Successfully execute query: {query}")
+                logger.info(f"Successfully execute query: {query}")
 
                 for record in cur:
                     yield record
@@ -74,7 +77,7 @@ class MySQLClient:
 
             try:
                 cur.execute(count_query)
-                logging.info(f"Successfully execute query: {count_query}")
+                logger.info(f"Successfully execute query: {count_query}")
 
                 record = cur.fetchone()
             except MySQLConnectorError as e:
@@ -107,7 +110,7 @@ class MySQLClient:
 
             try:
                 cur.execute(count_query)
-                logging.info(f"Successfully execute query: {count_query}")
+                logger.info(f"Successfully execute query: {count_query}")
 
                 records = cur.fetchall()
 
@@ -146,7 +149,7 @@ class MySQLClient:
             try:
                 cur.execute(query)
                 conn.commit()
-                logging.info(f"Successfully execute query: {query}")
+                logger.info(f"Successfully execute query: {query}")
             except MySQLConnectorError as e:
                 conn.rollback()
                 raise MySQLClientError(f"Failed to execute query: {query}, Raise exception: {e}")
