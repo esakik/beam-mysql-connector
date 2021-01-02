@@ -13,11 +13,11 @@ from tests.test_base import TestBase
 class TestReadRecordsPipeline(TestBase):
     def test_pipeline_no_splitter(self):
         expected = [
-            {"id": 1, "name": "test data1", "date": date(2020, 1, 1)},
-            {"id": 2, "name": "test data2", "date": date(2020, 2, 2)},
-            {"id": 3, "name": "test data3", "date": date(2020, 3, 3)},
-            {"id": 4, "name": "test data4", "date": date(2020, 4, 4)},
-            {"id": 5, "name": "test data5", "date": date(2020, 5, 5)},
+            {"id": 1, "name": "test data1", "date": date(2020, 1, 1), "memo": "memo1"},
+            {"id": 2, "name": "test data2", "date": date(2020, 2, 2), "memo": None},
+            {"id": 3, "name": "test data3", "date": date(2020, 3, 3), "memo": "memo3"},
+            {"id": 4, "name": "test data4", "date": date(2020, 4, 4), "memo": None},
+            {"id": 5, "name": "test data5", "date": date(2020, 5, 5), "memo": None},
         ]
 
         with TestPipeline() as p:
@@ -38,11 +38,11 @@ class TestReadRecordsPipeline(TestBase):
 
     def test_pipeline_limit_offset_splitter(self):
         expected = [
-            {"id": 1, "name": "test data1", "date": date(2020, 1, 1)},
-            {"id": 2, "name": "test data2", "date": date(2020, 2, 2)},
-            {"id": 3, "name": "test data3", "date": date(2020, 3, 3)},
-            {"id": 4, "name": "test data4", "date": date(2020, 4, 4)},
-            {"id": 5, "name": "test data5", "date": date(2020, 5, 5)},
+            {"id": 1, "name": "test data1", "date": date(2020, 1, 1), "memo": "memo1"},
+            {"id": 2, "name": "test data2", "date": date(2020, 2, 2), "memo": None},
+            {"id": 3, "name": "test data3", "date": date(2020, 3, 3), "memo": "memo3"},
+            {"id": 4, "name": "test data4", "date": date(2020, 4, 4), "memo": None},
+            {"id": 5, "name": "test data5", "date": date(2020, 5, 5), "memo": None},
         ]
 
         with TestPipeline() as p:
@@ -63,8 +63,8 @@ class TestReadRecordsPipeline(TestBase):
 
     def test_pipeline_ids_splitter(self):
         expected = [
-            {"id": 1, "name": "test data1", "date": date(2020, 1, 1)},
-            {"id": 2, "name": "test data2", "date": date(2020, 2, 2)},
+            {"id": 1, "name": "test data1", "date": date(2020, 1, 1), "memo": "memo1"},
+            {"id": 2, "name": "test data2", "date": date(2020, 2, 2), "memo": None},
         ]
 
         with TestPipeline() as p:
@@ -85,9 +85,9 @@ class TestReadRecordsPipeline(TestBase):
 
     def test_pipeline_date_splitter(self):
         expected = [
-            {"id": 1, "name": "test data1", "date": date(2020, 1, 1)},
-            {"id": 2, "name": "test data2", "date": date(2020, 2, 2)},
-            {"id": 3, "name": "test data3", "date": date(2020, 3, 3)},
+            {"id": 1, "name": "test data1", "date": date(2020, 1, 1), "memo": "memo1"},
+            {"id": 2, "name": "test data2", "date": date(2020, 2, 2), "memo": None},
+            {"id": 3, "name": "test data3", "date": date(2020, 3, 3), "memo": "memo3"},
         ]
 
         with TestPipeline() as p:
@@ -108,8 +108,8 @@ class TestReadRecordsPipeline(TestBase):
 
     def test_pipeline_partitions_splitter(self):
         expected = [
-            {"id": 2, "name": "test data2", "date": date(2020, 2, 2)},
-            {"id": 3, "name": "test data3", "date": date(2020, 3, 3)},
+            {"id": 2, "name": "test data2", "date": date(2020, 2, 2), "memo": None},
+            {"id": 3, "name": "test data3", "date": date(2020, 3, 3), "memo": "memo3"},
         ]
 
         with TestPipeline() as p:

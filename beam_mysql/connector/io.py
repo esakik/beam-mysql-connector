@@ -115,7 +115,13 @@ class _WriteToMySQLFn(beam.DoFn):
             values.append(value)
 
         column_str = ", ".join(columns)
-        value_str = ", ".join([f"{value}" if isinstance(value, (int, float)) else f"'{value}'" for value in values])
+        value_str = ", ".join(
+            [
+                f"{'NULL' if value is None else value}" if isinstance(value, (type(None), int, float)) else f"'{value}'"
+                for value in values
+            ]
+        )
+
         query = f"INSERT INTO {self._config['database']}.{self._table}({column_str}) VALUES({value_str});"
 
         self._queries.append(query)
