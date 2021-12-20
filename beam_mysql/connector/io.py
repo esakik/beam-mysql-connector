@@ -55,6 +55,7 @@ class WriteToMySQL(PTransform):
         password: Union[str, ValueProvider],
         port: Union[int, ValueProvider] = 3306,
         batch_size: int = 1000,
+        replace: bool = False
     ):
         super().__init__()
         self._host = host
@@ -64,11 +65,12 @@ class WriteToMySQL(PTransform):
         self._password = password
         self._port = port
         self._batch_size = batch_size
+        self._replace = replace
 
     def expand(self, pcoll: PCollection) -> PCollection:
         return pcoll | beam.ParDo(
             _WriteToMySQLFn(
-                self._host, self._database, self._table, self._user, self._password, self._port, self._batch_size
+                self._host, self._database, self._table, self._user, self._password, self._port, self._batch_size, self._replace
             )
         )
 
@@ -85,6 +87,7 @@ class _WriteToMySQLFn(beam.DoFn):
         password: Union[str, ValueProvider],
         port: Union[int, ValueProvider],
         batch_size: int,
+        replace: bool
     ):
         super().__init__()
         self._host = host
@@ -94,6 +97,8 @@ class _WriteToMySQLFn(beam.DoFn):
         self._password = password
         self._port = port
         self._batch_size = batch_size
+        self._replace = replace
+        self
 
         self._config = {
             "host": self._host,
@@ -138,7 +143,8 @@ class _WriteToMySQLFn(beam.DoFn):
             self._columns_and_values[column_str].clear()
 
     def _build_query(self, column_str, values_str):
-        return f"INSERT INTO {self._config['database']}.{self._table}({column_str}) VALUES {','.join(values_str)};"
+        statement = "INSERT" if self._replace else "REPLACE"
+        return f"{statement} INTO {self._config['database']}.{self._table}({column_str}) VALUES {','.join(values_str)};"
 
     def _build_value(self):
         for k, v in self._config.items():
