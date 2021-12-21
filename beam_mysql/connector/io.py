@@ -98,7 +98,6 @@ class _WriteToMySQLFn(beam.DoFn):
         self._port = port
         self._batch_size = batch_size
         self._replace = replace
-        self
 
         self._config = {
             "host": self._host,
@@ -143,7 +142,7 @@ class _WriteToMySQLFn(beam.DoFn):
             self._columns_and_values[column_str].clear()
 
     def _build_query(self, column_str, values_str):
-        statement = "INSERT" if self._replace else "REPLACE"
+        statement = "REPLACE" if self._replace else "INSERT"
         return f"{statement} INTO {self._config['database']}.{self._table}({column_str}) VALUES {','.join(values_str)};"
 
     def _build_value(self):
