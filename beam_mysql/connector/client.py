@@ -12,6 +12,7 @@ from beam_mysql.connector.errors import MySQLClientError
 
 _SELECT_STATEMENT = "SELECT"
 _INSERT_STATEMENT = "INSERT"
+_REPLACE_STATEMENT = "REPLACE"
 
 logger = getLogger(__name__)
 logger.setLevel(INFO)
@@ -136,12 +137,12 @@ class MySQLClient:
         Load dict record into mysql.
 
         Args:
-            query: query with insert or update statement
+            query: query with insert, update or replace statement
 
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query, [_INSERT_STATEMENT])
+        self._validate_query(query, [_INSERT_STATEMENT, _REPLACE_STATEMENT])
 
         with _MySQLConnection(self._config) as conn:
             cur = conn.cursor()
@@ -166,9 +167,9 @@ class MySQLClient:
     def _validate_query(query: str, statements: List[str]):
         query = query.lstrip()
 
-        for statement in statements:
-            if statement and not query.lower().startswith(statement.lower()):
-                raise MySQLClientError(f"Query expected to start with {statement} statement. Query: {query}")
+        # Check if query starts with any given statement
+        if any(map(lambda x: x and query.lower().startswith(x.lower()), statements)):
+            raise MySQLClientError(f"Query expected to start with one of these statement: {statements}. Query: {query}")
 
 
 class _MySQLConnection:
