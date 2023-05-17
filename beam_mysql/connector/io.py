@@ -129,13 +129,15 @@ class _WriteToMySQLFn(beam.DoFn):
 
         if len(self._columns_and_values) > self._batch_size:
             for column_str in self._columns_and_values.keys():
-                self._client.record_loader(self._build_query(column_str, self._columns_and_values[column_str]))
-                self._columns_and_values[column_str].clear()
+                if len(self._columns_and_values[column_str]) > 0:
+                    self._client.record_loader(self._build_query(column_str, self._columns_and_values[column_str]))
+                    self._columns_and_values[column_str].clear()
 
     def finish_bundle(self):
         for column_str in self._columns_and_values.keys():
-            self._client.record_loader(self._build_query(column_str, self._columns_and_values[column_str]))
-            self._columns_and_values[column_str].clear()
+            if len(self._columns_and_values[column_str]) > 0:
+                self._client.record_loader(self._build_query(column_str, self._columns_and_values[column_str]))
+                self._columns_and_values[column_str].clear()
 
     def _build_query(self, column_str, values_str):
         return f"INSERT INTO {self._config['database']}.{self._table}({column_str}) VALUES {','.join(values_str)};"
