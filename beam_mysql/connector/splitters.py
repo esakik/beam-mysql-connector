@@ -1,16 +1,14 @@
 """A wrapper class of `~apache_beam.io.iobase.BoundedSource` functions."""
 
 import re
-from abc import ABCMeta
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from typing import Callable
-from typing import Iterator
+from typing import Callable, Iterator
 
 from apache_beam.io import iobase
-from apache_beam.io.range_trackers import LexicographicKeyRangeTracker
-from apache_beam.io.range_trackers import OffsetRangeTracker
-from apache_beam.io.range_trackers import UnsplittableRangeTracker
+from apache_beam.io.range_trackers import (LexicographicKeyRangeTracker,
+                                           OffsetRangeTracker,
+                                           UnsplittableRangeTracker)
 from dateutil.relativedelta import relativedelta
 
 

@@ -7,8 +7,7 @@ from apache_beam.options.value_provider import ValueProvider
 
 from beam_mysql.connector import splitters
 from beam_mysql.connector.client import MySQLClient
-from beam_mysql.connector.utils import cleanse_query
-from beam_mysql.connector.utils import get_runtime_value
+from beam_mysql.connector.utils import cleanse_query, get_runtime_value
 
 
 class MySQLSource(iobase.BoundedSource):

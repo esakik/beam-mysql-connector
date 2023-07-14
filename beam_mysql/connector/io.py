@@ -1,7 +1,6 @@
 """I/O connectors of mysql."""
 
-from typing import Dict
-from typing import Union
+from typing import Dict, Union
 
 import apache_beam as beam
 from apache_beam.io import iobase

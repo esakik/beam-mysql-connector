@@ -3,9 +3,7 @@
 import os
 import subprocess
 
-from setuptools import Command
-from setuptools import find_packages
-from setuptools import setup
+from setuptools import Command, find_packages, setup
 
 SRC_DIR_NAME = "beam_mysql"
 EXAMPLES_DIR_NAME = "examples"

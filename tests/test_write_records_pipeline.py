@@ -1,7 +1,8 @@
 """A test of write records pipeline."""
 
-import apache_beam as beam
 import datetime
+
+import apache_beam as beam
 from apache_beam.testing.test_pipeline import TestPipeline
 
 from beam_mysql.connector.io import WriteToMySQL
