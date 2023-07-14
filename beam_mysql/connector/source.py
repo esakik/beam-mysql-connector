@@ -67,7 +67,9 @@ class MySQLSource(iobase.BoundedSource):
         if not self._is_builded:
             self._build_value()
 
-        for split in self._splitter.split(desired_bundle_size, start_position, stop_position):
+        for split in self._splitter.split(
+            desired_bundle_size, start_position, stop_position
+        ):
             yield split
 
     def _build_value(self):

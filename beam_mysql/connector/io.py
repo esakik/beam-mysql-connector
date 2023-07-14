@@ -38,7 +38,15 @@ class ReadFromMySQL(PTransform):
 
     def expand(self, pcoll: PCollection) -> PCollection:
         return pcoll | iobase.Read(
-            MySQLSource(self._query, self._host, self._database, self._user, self._password, self._port, self._splitter)
+            MySQLSource(
+                self._query,
+                self._host,
+                self._database,
+                self._user,
+                self._password,
+                self._port,
+                self._splitter,
+            )
         )
 
 
@@ -67,7 +75,13 @@ class WriteToMySQL(PTransform):
     def expand(self, pcoll: PCollection) -> PCollection:
         return pcoll | beam.ParDo(
             _WriteToMySQLFn(
-                self._host, self._database, self._table, self._user, self._password, self._port, self._batch_size
+                self._host,
+                self._database,
+                self._table,
+                self._user,
+                self._password,
+                self._port,
+                self._batch_size,
             )
         )
 
@@ -116,7 +130,9 @@ class _WriteToMySQLFn(beam.DoFn):
         column_str = ", ".join(columns)
         value_str = ", ".join(
             [
-                f"{'NULL' if value is None else value}" if isinstance(value, (type(None), int, float)) else f"'{value}'"
+                f"{'NULL' if value is None else value}"
+                if isinstance(value, (type(None), int, float))
+                else f"'{value}'"
                 for value in values
             ]
         )

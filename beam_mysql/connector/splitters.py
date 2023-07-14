@@ -6,9 +6,11 @@ from datetime import datetime
 from typing import Callable, Iterator
 
 from apache_beam.io import iobase
-from apache_beam.io.range_trackers import (LexicographicKeyRangeTracker,
-                                           OffsetRangeTracker,
-                                           UnsplittableRangeTracker)
+from apache_beam.io.range_trackers import (
+    LexicographicKeyRangeTracker,
+    OffsetRangeTracker,
+    UnsplittableRangeTracker,
+)
 from dateutil.relativedelta import relativedelta
 
 
@@ -51,7 +53,9 @@ class NoSplitter(BaseSplitter):
         if stop_position is None:
             stop_position = OffsetRangeTracker.OFFSET_INFINITY
 
-        return UnsplittableRangeTracker(OffsetRangeTracker(start_position, stop_position))
+        return UnsplittableRangeTracker(
+            OffsetRangeTracker(start_position, stop_position)
+        )
 
     def read(self, range_tracker):
         for record in self.source.client.record_generator(self.source.query):
@@ -64,7 +68,10 @@ class NoSplitter(BaseSplitter):
             stop_position = OffsetRangeTracker.OFFSET_INFINITY
 
         yield iobase.SourceBundle(
-            weight=desired_bundle_size, source=self.source, start_position=start_position, stop_position=stop_position
+            weight=desired_bundle_size,
+            source=self.source,
+            start_position=start_position,
+            stop_position=stop_position,
         )
 
 
@@ -91,7 +98,9 @@ class LimitOffsetSplitter(BaseSplitter):
 
     def read(self, range_tracker):
         offset, limit = range_tracker.start_position(), range_tracker.stop_position()
-        query = f"SELECT * FROM ({self.source.query}) as subq LIMIT {limit} OFFSET {offset}"
+        query = (
+            f"SELECT * FROM ({self.source.query}) as subq LIMIT {limit} OFFSET {offset}"
+        )
         for record in self.source.client.record_generator(query):
             yield record
 
@@ -106,7 +115,10 @@ class LimitOffsetSplitter(BaseSplitter):
         last_position = 0
         for offset in range(start_position, stop_position, self._batch_size):
             yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self.source, start_position=offset, stop_position=self._batch_size
+                weight=desired_bundle_size,
+                source=self.source,
+                start_position=offset,
+                stop_position=self._batch_size,
             )
             last_position = offset + self._batch_size
 
@@ -121,7 +133,9 @@ class LimitOffsetSplitter(BaseSplitter):
 class IdsSplitter(BaseSplitter):
     """Split bounded source by any ids."""
 
-    def __init__(self, generate_ids_fn: Callable[[], Iterator], batch_size: int = 1000000):
+    def __init__(
+        self, generate_ids_fn: Callable[[], Iterator], batch_size: int = 1000000
+    ):
         self._generate_ids_fn = generate_ids_fn
         self._batch_size = batch_size
 
@@ -160,7 +174,9 @@ class IdsSplitter(BaseSplitter):
             raise ValueError(f"Not support 'not in' phrase: {self.source.query}")
         if not re.search(r"in\({ids}\)", condensed_query):
             example = "SELECT * FROM tests WHERE id IN ({ids})"
-            raise ValueError(f"Require 'in' phrase and 'ids' key on query: {self.source.query}, e.g. '{example}'")
+            raise ValueError(
+                f"Require 'in' phrase and 'ids' key on query: {self.source.query}, e.g. '{example}'"
+            )
 
     @staticmethod
     def _create_bundle_source(desired_bundle_size, source, ids):
@@ -172,7 +188,10 @@ class IdsSplitter(BaseSplitter):
             raise ValueError(f"Unexpected ids: {ids}")
 
         return iobase.SourceBundle(
-            weight=desired_bundle_size, source=source, start_position=ids_str, stop_position=None
+            weight=desired_bundle_size,
+            source=source,
+            start_position=ids_str,
+            stop_position=None,
         )
 
 
@@ -192,7 +211,10 @@ class PartitionSplitter(BaseSplitter):
         if range_tracker.start_position() is None:
             query = self.source.query
         else:
-            partition, partitions = range_tracker.start_position(), range_tracker.stop_position()
+            partition, partitions = (
+                range_tracker.start_position(),
+                range_tracker.stop_position(),
+            )
             query = self.source.query.replace(partitions, partition)
 
         for record in self.source.client.record_generator(query):
@@ -225,13 +247,17 @@ class PartitionSplitter(BaseSplitter):
     def _validate_query(self):
         if not re.search(self.PATTERN, self.source.query):
             example = "SELECT * FROM tests PARTITION (p202001,p202002)"
-            raise ValueError(f"Require 'partition' phrase on query: {self.source.query}, e.g. '{example}'")
+            raise ValueError(
+                f"Require 'partition' phrase on query: {self.source.query}, e.g. '{example}'"
+            )
 
 
 class DateSplitter(BaseSplitter):
     """Split bounded source by dates."""
 
-    PATTERN = r".*[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*[\w\s]+[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*.*"
+    PATTERN = (
+        r".*[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*[\w\s]+[\'\"]*(\d{4}-\d{2}-\d{2})[\'\"]*.*"
+    )
 
     def estimate_size(self):
         return self.source.client.rough_counts_estimator(self.source.query)
@@ -244,9 +270,14 @@ class DateSplitter(BaseSplitter):
         if range_tracker.start_position() is None:
             query = self.source.query
         else:
-            start_date, end_date = range_tracker.start_position(), range_tracker.stop_position()
+            start_date, end_date = (
+                range_tracker.start_position(),
+                range_tracker.stop_position(),
+            )
             match = re.match(self.PATTERN, self.source.query)
-            query = self.source.query.replace(match.group(1), start_date).replace(match.group(2), end_date)
+            query = self.source.query.replace(match.group(1), start_date).replace(
+                match.group(2), end_date
+            )
 
         for record in self.source.client.record_generator(query):
             yield record
@@ -261,24 +292,38 @@ class DateSplitter(BaseSplitter):
         months = self._diff_between_dates(start_date, end_date)
         for month in months:
             yield iobase.SourceBundle(
-                weight=desired_bundle_size, source=self.source, start_position=month[0], stop_position=month[1],
+                weight=desired_bundle_size,
+                source=self.source,
+                start_position=month[0],
+                stop_position=month[1],
             )
 
     def _validate_query(self):
         if not re.search(self.PATTERN, self.source.query):
             example = "SELECT * FROM tests WHERE date BETWEEN 2019-01-01 AND 2020-01-01"
-            raise ValueError(f"Require 'between' phrase on query: {self.source.query}, e.g. '{example}'")
+            raise ValueError(
+                f"Require 'between' phrase on query: {self.source.query}, e.g. '{example}'"
+            )
 
     @staticmethod
     def _diff_between_dates(start_date, end_date):
-        diff_months = (end_date.year * 12 + end_date.month) - (start_date.year * 12 + start_date.month)
+        diff_months = (end_date.year * 12 + end_date.month) - (
+            start_date.year * 12 + start_date.month
+        )
         tuple_months = [
-            (start_date + relativedelta(months=i), start_date + relativedelta(months=i + 1) - relativedelta(days=1))
+            (
+                start_date + relativedelta(months=i),
+                start_date + relativedelta(months=i + 1) - relativedelta(days=1),
+            )
             for i in range(diff_months + 1)
         ]
         last_date = tuple_months[-1][1]
-        tuple_months[-1] = (tuple_months[-1][0], datetime(last_date.year, last_date.month, end_date.day))
+        tuple_months[-1] = (
+            tuple_months[-1][0],
+            datetime(last_date.year, last_date.month, end_date.day),
+        )
 
         return [
-            (tuple_month[0].strftime("%Y-%m-%d"), tuple_month[1].strftime("%Y-%m-%d")) for tuple_month in tuple_months
+            (tuple_month[0].strftime("%Y-%m-%d"), tuple_month[1].strftime("%Y-%m-%d"))
+            for tuple_month in tuple_months
         ]

@@ -22,18 +22,38 @@ class SimpleCommand(Command):
 
 class LintCommand(SimpleCommand):
     def run(self):
-        subprocess.run(["black", SRC_DIR_NAME, EXAMPLES_DIR_NAME, TESTS_DIR_NAME, "-l", "120", "--check", "--diff"])
+        subprocess.run(
+            [
+                "black",
+                SRC_DIR_NAME,
+                EXAMPLES_DIR_NAME,
+                TESTS_DIR_NAME,
+                "-l",
+                "120",
+                "--check",
+                "--diff",
+            ]
+        )
         subprocess.run(["mypy", SRC_DIR_NAME, EXAMPLES_DIR_NAME, TESTS_DIR_NAME])
 
 
 class FormatCommand(SimpleCommand):
     def run(self):
-        subprocess.run(["black", SRC_DIR_NAME, EXAMPLES_DIR_NAME, TESTS_DIR_NAME, "-l", "120"])
+        subprocess.run(
+            ["black", SRC_DIR_NAME, EXAMPLES_DIR_NAME, TESTS_DIR_NAME, "-l", "120"]
+        )
 
 
 def get_version():
     global_names = {}
-    exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "beam_mysql/__init__.py")).read(), global_names)
+    exec(
+        open(
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "beam_mysql/__init__.py"
+            )
+        ).read(),
+        global_names,
+    )
     return global_names["__version__"]
 
 

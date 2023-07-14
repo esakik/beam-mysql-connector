@@ -23,7 +23,9 @@ class MySQLClient:
         self._config = config
         self._validate_config(self._config)
 
-    def record_generator(self, query: str, dictionary=True) -> Generator[Dict, None, None]:
+    def record_generator(
+        self, query: str, dictionary=True
+    ) -> Generator[Dict, None, None]:
         """
         Generate dict record from raw data on mysql.
 
@@ -50,7 +52,9 @@ class MySQLClient:
                 for record in cur:
                     yield record
             except MySQLConnectorError as e:
-                raise MySQLClientError(f"Failed to execute query: {query}, Raise exception: {e}")
+                raise MySQLClientError(
+                    f"Failed to execute query: {query}, Raise exception: {e}"
+                )
 
             cur.close()
 
@@ -80,7 +84,9 @@ class MySQLClient:
 
                 record = cur.fetchone()
             except MySQLConnectorError as e:
-                raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")
+                raise MySQLClientError(
+                    f"Failed to execute query: {count_query}, Raise exception: {e}"
+                )
 
             cur.close()
 
@@ -121,12 +127,16 @@ class MySQLClient:
                     if record["select_type"] in ("PRIMARY", "SIMPLE"):
                         total_number = record["rows"]
             except MySQLConnectorError as e:
-                raise MySQLClientError(f"Failed to execute query: {count_query}, Raise exception: {e}")
+                raise MySQLClientError(
+                    f"Failed to execute query: {count_query}, Raise exception: {e}"
+                )
 
             cur.close()
 
             if total_number <= 0:
-                raise mysql.connector.errors.Error(f"Failed to estimate total number of records. Query: {count_query}")
+                raise mysql.connector.errors.Error(
+                    f"Failed to estimate total number of records. Query: {count_query}"
+                )
             else:
                 return total_number
 
@@ -151,7 +161,9 @@ class MySQLClient:
                 logger.info(f"Successfully execute query: {query}")
             except MySQLConnectorError as e:
                 conn.rollback()
-                raise MySQLClientError(f"Failed to execute query: {query}, Raise exception: {e}")
+                raise MySQLClientError(
+                    f"Failed to execute query: {query}, Raise exception: {e}"
+                )
 
             cur.close()
 
@@ -159,7 +171,9 @@ class MySQLClient:
     def _validate_config(config: Dict):
         required_keys = {"host", "port", "database", "user", "password"}
         if not config.keys() == required_keys:
-            raise MySQLClientError(f"Config is not satisfied. required: {required_keys}, actual: {config.keys()}")
+            raise MySQLClientError(
+                f"Config is not satisfied. required: {required_keys}, actual: {config.keys()}"
+            )
 
     @staticmethod
     def _validate_query(query: str, statement: str) -> None:
@@ -181,7 +195,9 @@ class MySQLClient:
         cleansed_query = _remove_comments_and_cte(query)
 
         if statement and not cleansed_query.lower().startswith(statement.lower()):
-            raise MySQLClientError(f"Query expected to start with {statement} statement. Query: {query}")
+            raise MySQLClientError(
+                f"Query expected to start with {statement} statement. Query: {query}"
+            )
 
 
 class _MySQLConnection:
