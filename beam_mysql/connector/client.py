@@ -1,9 +1,8 @@
 """A client of mysql."""
 
+import re
 from logging import INFO, getLogger
-from typing import Dict
-from typing import Generator
-from typing import List
+from typing import Dict, Generator
 
 import mysql.connector
 from mysql.connector.errors import Error as MySQLConnectorError
@@ -38,7 +37,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query, [_SELECT_STATEMENT])
+        self._validate_query(query, _SELECT_STATEMENT)
 
         with _MySQLConnection(self._config) as conn:
             # buffered is false because it can be assumed that the data size is too large
@@ -68,7 +67,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query, [_SELECT_STATEMENT])
+        self._validate_query(query, _SELECT_STATEMENT)
         count_query = f"SELECT COUNT(*) AS count FROM ({query}) as subq"
 
         with _MySQLConnection(self._config) as conn:
@@ -101,7 +100,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query, [_SELECT_STATEMENT])
+        self._validate_query(query, _SELECT_STATEMENT)
         count_query = f"EXPLAIN SELECT * FROM ({query}) as subq"
 
         with _MySQLConnection(self._config) as conn:
@@ -141,7 +140,7 @@ class MySQLClient:
         Raises:
             ~beam_mysql.connector.errors.MySQLClientError
         """
-        self._validate_query(query, [_INSERT_STATEMENT])
+        self._validate_query(query, _INSERT_STATEMENT)
 
         with _MySQLConnection(self._config) as conn:
             cur = conn.cursor()
@@ -163,12 +162,26 @@ class MySQLClient:
             raise MySQLClientError(f"Config is not satisfied. required: {required_keys}, actual: {config.keys()}")
 
     @staticmethod
-    def _validate_query(query: str, statements: List[str]):
-        query = query.lstrip()
+    def _validate_query(query: str, statement: str) -> None:
+        def _remove_comments_and_cte(query):
+            # delete comments
+            query = re.sub(r"--.*\n", " ", query)
+            query = re.sub(r"/\*[.\s].*\*/", " ", query, flags=re.DOTALL)
+            # delete new line
+            query = query.replace("\n", " ")
+            # delete cte clause
+            query = re.sub(
+                r"WITH\s+(?:\w+\s+AS\s+\(.+?\)\s*,?\s*)+",
+                "",
+                query,
+                flags=re.IGNORECASE,
+            )
+            return query.strip()
 
-        for statement in statements:
-            if statement and not query.lower().startswith(statement.lower()):
-                raise MySQLClientError(f"Query expected to start with {statement} statement. Query: {query}")
+        cleansed_query = _remove_comments_and_cte(query)
+
+        if statement and not cleansed_query.lower().startswith(statement.lower()):
+            raise MySQLClientError(f"Query expected to start with {statement} statement. Query: {query}")
 
 
 class _MySQLConnection:
