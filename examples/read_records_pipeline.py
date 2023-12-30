@@ -12,11 +12,19 @@ class ReadRecordsOptions(PipelineOptions):
     def _add_argparse_args(cls, parser):
         parser.add_value_provider_argument("--host", dest="host", default="localhost")
         parser.add_value_provider_argument("--port", dest="port", default=3307)
-        parser.add_value_provider_argument("--database", dest="database", default="test_db")
-        parser.add_value_provider_argument("--query", dest="query", default="SELECT * FROM test_db.tests;")
+        parser.add_value_provider_argument(
+            "--database", dest="database", default="test_db"
+        )
+        parser.add_value_provider_argument(
+            "--query", dest="query", default="SELECT * FROM test_db.tests;"
+        )
         parser.add_value_provider_argument("--user", dest="user", default="root")
-        parser.add_value_provider_argument("--password", dest="password", default="root")
-        parser.add_value_provider_argument("--output", dest="output", default="output/read-records-result")
+        parser.add_value_provider_argument(
+            "--password", dest="password", default="root"
+        )
+        parser.add_value_provider_argument(
+            "--output", dest="output", default="output/read-records-result"
+        )
 
 
 def run():
@@ -38,7 +46,10 @@ def run():
         p
         | "ReadFromMySQL" >> read_from_mysql
         | "NoTransform" >> beam.Map(lambda e: e)
-        | "WriteToText" >> beam.io.WriteToText(options.output, file_name_suffix=".txt", shard_name_template="")
+        | "WriteToText"
+        >> beam.io.WriteToText(
+            options.output, file_name_suffix=".txt", shard_name_template=""
+        )
     )
 
     p.run().wait_until_finish()

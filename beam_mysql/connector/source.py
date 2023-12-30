@@ -7,8 +7,7 @@ from apache_beam.options.value_provider import ValueProvider
 
 from beam_mysql.connector import splitters
 from beam_mysql.connector.client import MySQLClient
-from beam_mysql.connector.utils import cleanse_query
-from beam_mysql.connector.utils import get_runtime_value
+from beam_mysql.connector.utils import cleanse_query, get_runtime_value
 
 
 class MySQLSource(iobase.BoundedSource):
@@ -68,7 +67,9 @@ class MySQLSource(iobase.BoundedSource):
         if not self._is_builded:
             self._build_value()
 
-        for split in self._splitter.split(desired_bundle_size, start_position, stop_position):
+        for split in self._splitter.split(
+            desired_bundle_size, start_position, stop_position
+        ):
             yield split
 
     def _build_value(self):
