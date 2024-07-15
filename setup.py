@@ -63,17 +63,17 @@ with open("README.md") as f:
 
 PACKAGE_NAME = "beam-mysql-connector"
 PACKAGE_VERSION = get_version()
-PACKAGE_DESCRIPTION = "MySQL I/O Connector of Apache Beam"
-PACKAGE_URL = "https://github.com/esaki01/beam-mysql-connector"
+PACKAGE_DESCRIPTION = "Apache Beam I/O connector designed for accessing MySQL databases."
+PACKAGE_URL = "https://github.com/esakik/beam-mysql-connector"
 PACKAGE_DOWNLOAD_URL = "https://pypi.python.org/pypi/beam-mysql-connector"
 PACKAGE_AUTHOR = "esakik"
-PACKAGE_EMAIL = "esakik.work@gmail.com"
+PACKAGE_EMAIL = "esakik.dev@gmail.com"
 PACKAGE_KEYWORDS = "apache beam mysql connector"
 PACKAGE_LONG_DESCRIPTION = README
 
 REQUIRED_PACKAGES = [
-    "apache-beam>=2.15",
-    "mysql-connector-python>=8.0",
+    "apache-beam>=2.25.0",
+    "mysql-connector-python>=8.1.0",
 ]
 
 setup(
@@ -88,14 +88,13 @@ setup(
     author_email=PACKAGE_EMAIL,
     packages=find_packages(),
     install_requires=REQUIRED_PACKAGES,
-    python_requires=">=3.5",
+    python_requires=">=3.8,<3.12",
     classifiers=[
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     license="MIT",
     keywords=PACKAGE_KEYWORDS,
