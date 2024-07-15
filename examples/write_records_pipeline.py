@@ -40,7 +40,7 @@ def run():
     (
         p
         | "ReadFromInMemory"
-        >> beam.Create([{"name": "test data3"}, {"name": "test data4"}])
+        >> beam.Create([{"name": "test data6", "date": "2020-06-06"}, {"name": "test data7", "date": "2020-06-07"}])
         | "NoTransform" >> beam.Map(lambda e: e)
         | "WriteToMySQL" >> write_to_mysql
     )
