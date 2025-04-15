@@ -1,13 +1,14 @@
 # Beam - MySQL Connector
-[![PyPI version](https://badge.fury.io/py/beam-mysql-connector.svg)](https://badge.fury.io/py/beam-mysql-connector)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/beam-mysql-connector)
+[![PyPI version](https://badge.fury.io/py/beam-mysql-connector2.svg)](https://badge.fury.io/py/beam-mysql-connector2)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/beam-mysql-connector2)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Beam - MySQL Connector is an io connector of [Apache Beam](https://beam.apache.org/) to access MySQL databases.
+Beam - MySQL Connector (with Python 3.12 support) is an io connector of [Apache Beam](https://beam.apache.org/) to access MySQL databases.
+This is a direct fork of [beam-mysql-connector](https://github.com/esakik/beam-mysql-connector).
 
 ## Installation
 ```bash
-pip install beam-mysql-connector
+pip install beam-mysql-connector2
 ```
 
 ## Getting Started
@@ -45,4 +46,4 @@ write_to_mysql = WriteToMySQL(
 ```
 
 ## License
-MIT License. Please refer to the [LICENSE.txt](https://github.com/esaki01/beam-mysql-connector/blob/master/LICENSE.txt), for further details.
+MIT License. Please refer to the [LICENSE.txt](https://github.com/gnomezgrave/beam-mysql-connector2/blob/master/LICENSE.txt), for further details.
